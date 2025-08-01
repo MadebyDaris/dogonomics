@@ -45,4 +45,5 @@ app.*.map.json
 /android/app/release
 
 ./lib/utils/token.dart
+./lib/firebase_options.dart
 # This file contains sensitive information such as API keys or tokens.

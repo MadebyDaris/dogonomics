@@ -9,31 +9,21 @@ import 'dart:convert';
 
 
 class StockViewTab extends StatelessWidget {
+  final List<Stock> stocks;
+
+  const StockViewTab({super.key, required this.stocks});
 
   @override
   Widget build(BuildContext context) {
     return ListView(
       padding: EdgeInsets.all(16),
       children: [
-        StockCard(
-          symbol: 'AAPL',
-          name: 'Apple',
-          code: 'Apple Inc.',
-          price: 2749.54,
-          change: 0.07,
-          isPositive: true,
-          color: Colors.amber.shade700,
-        ),
-        SizedBox(height: 12),
-        StockCard(
-          symbol: 'MSFT',
-          name: 'Microsoft',
-          code: 'Microsoft Inc.',
-          price: 32.83,
-          change: 1.30,
-          isPositive: false,
-          color: Colors.amber.shade700!,
-        ),
+        ...stocks.map((stock) => Column(
+          children: [
+            buildStockCard(stock),
+            SizedBox(height: 12),
+          ],
+        )),
         SizedBox(height: 12),
         Container(child: Align(child: 
           FloatingActionButton.extended(
@@ -174,4 +164,52 @@ class _StockCardState extends State<StockCard> {
     )
     );
   }
+}
+
+class Stock {
+  final String symbol;
+  final String name;
+  final String code;
+  final double price;
+  final double change;
+
+  Stock({
+    required this.symbol,
+    required this.name,
+    required this.code,
+    required this.price,
+    required this.change,
+  });
+
+  bool get isPositive => change >= 0;
+
+  factory Stock.fromMap(Map<String, dynamic> map) {
+    return Stock(
+      symbol: map['symbol'],
+      name: map['name'],
+      code: map['code'],
+      price: (map['price'] as num).toDouble(),
+      change: (map['change'] as num).toDouble(),
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+    'symbol': symbol,
+    'name': name,
+    'code': code,
+    'price': price,
+    'change': change,
+  };
+}
+
+Widget buildStockCard(Stock stock) {
+  return StockCard(
+    symbol: stock.symbol,
+    name: stock.name,
+    code: stock.code,
+    price: stock.price,
+    change: stock.change,
+    isPositive: stock.isPositive,
+    color: Colors.amber.shade700,
+  );
 }

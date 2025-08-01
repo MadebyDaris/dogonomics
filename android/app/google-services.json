@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "974691282710",
+    "project_id": "dogonomics",
+    "storage_bucket": "dogonomics.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:974691282710:android:ff90c6a9d6e4eb72352a37",
+        "android_client_info": {
+          "package_name": "com.example.dogonomics_frontend"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDAyWevxKdVTZGw5-BHBG4eYhYCM13f5tU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,3 +1,4 @@
+import 'package:dogonomics_frontend/backend/user.dart';
 import 'package:dogonomics_frontend/pages/stockview.dart';
 import 'package:dogonomics_frontend/utils/constant.dart';
 import 'package:flutter/material.dart';
@@ -7,9 +8,10 @@ import 'dart:convert';
 import "package:dogonomics_frontend/pages/stockview.dart";
 
 class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
+  const MyHomePage({super.key, required this.title, this.user});
 
   final String title;
+  final AppUser? user;
 
   @override
   State<MyHomePage> createState() => _MyHomePageState();

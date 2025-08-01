@@ -41,7 +41,7 @@ class LogoManager {
 
     // If not downloaded, download and save
     try {
-      final token = await getToken(); // get token properly>
+      final token = await getLogoToken(); // get token properly>
       await Directory(path).create(recursive: true);
       final response = await _dio.get(
         '$_baseUrl/$symbol?',
