@@ -5,7 +5,7 @@ class AppUser {
   final String id;
   final String name;
   final String email;
-  final List<dynamic> portfolio; 
+  List<dynamic> portfolio; 
 
   AppUser({
     required this.id,

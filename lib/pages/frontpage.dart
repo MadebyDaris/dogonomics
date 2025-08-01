@@ -1,6 +1,8 @@
 import 'package:dogonomics_frontend/backend/user.dart';
 import 'package:dogonomics_frontend/pages/stockview.dart';
 import 'package:dogonomics_frontend/utils/constant.dart';
+import 'package:dogonomics_frontend/utils/tickerData.dart';
+import 'package:dogonomics_frontend/utils/tickerData.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
@@ -8,10 +10,11 @@ import 'dart:convert';
 import "package:dogonomics_frontend/pages/stockview.dart";
 
 class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title, this.user});
+  MyHomePage({super.key, required this.title, this.user});
 
   final String title;
   final AppUser? user;
+  bool isLoading = true;
 
   @override
   State<MyHomePage> createState() => _MyHomePageState();
@@ -21,7 +24,8 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
   late TabController _tabController;
 
   final tabs = ['Stocks', 'Commodities', 'CFDs', 'Bonds'];
-  
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -55,7 +59,7 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
         controller: _tabController,
           children: tabs.map((tab) {
           if (tab == 'Stocks') {
-            return StockViewTab();
+            return StockViewTab(stocks: List<Stock>.from(widget.user!.portfolio),);
           } else {
             return Center(child: Text('Coming Soon...', style: TextStyle(color: Colors.grey)));
           }
@@ -68,24 +72,13 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
     super.initState();
     _tabController = TabController(length: tabs.length, vsync: this, initialIndex: 1);
   }
-  _topAppBar() {
-    return Row(
-      children: [
-        Column(
-          children: [
-            Text("Welcome to Dogonomics"),
-            Text("sup")
-          ],
-        ),
-        FloatingActionButton(
-          onPressed: null,
-          child: Icon(Icons.beach_access),),
-        FloatingActionButton(
-          onPressed: null,
-          child: Icon(Icons.twenty_three_mp),)
-      ],
-    );
-  }
+Future<void> _loadUserStocks() async {
+  if (widget.user == null) return;
+  final List<Stock> userStocks = List<Stock>.from(widget.user!.portfolio);
+  final enrichedStocks = await fetchUserQuotes(userStocks);
+  widget.user!.portfolio = enrichedStocks;
+  widget.isLoading = false;
+}
 }
 
 class CommoditiesTab extends StatelessWidget {

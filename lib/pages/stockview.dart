@@ -2,6 +2,9 @@ import 'dart:io';
 
 import 'package:dogonomics_frontend/utils/constant.dart';
 import 'package:dogonomics_frontend/utils/logoManager.dart';
+import 'package:dogonomics_frontend/utils/stockDialog.dart';
+import 'package:dogonomics_frontend/utils/tickerData.dart';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
@@ -30,13 +33,36 @@ class StockViewTab extends StatelessWidget {
             backgroundColor: MAINGREY,
             foregroundColor: MAINGREY_LIGHT,
             onPressed: () {
-              // Respond to button press
+              Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => AddStockPage(
+                onStockSelected: (symbol) async {
+                  await addStockToPortfolio(symbol); // Your function
+                  // setState(() {}); // Refresh UI if needed
+      },
+    ),
+  ),
+);
+
             },
             icon: Icon(Icons.add),
             label: Text('ETF STOCKS'),
           ),),)
       ],
     );
+  }
+
+  Future<void> addStockToPortfolio(String symbol) async {
+    final newStock = await fetchSingleStock(
+      symbol: symbol,
+      name: 'New Stock',
+      code: 'ETF',
+    );
+
+    if (newStock != null) {
+      stocks.add(newStock);
+    }
   }
 }
 
