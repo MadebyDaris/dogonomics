@@ -47,8 +47,8 @@ func GetNewsSentimentBERT(c *gin.Context) {
 	symbol := c.Param("symbol")
 	news, _ := sentAnalysis.FetchData(symbol)
 	// BERTnews :)=
-	for _, item := range news {
-		sentAnalysis.AnalyzeWithPython(item.Content)
-	}
+	// for _, item := range news {
+	// 	sentAnalysis.AnalyzeWithPython(item.Content)
+	// }
 	c.JSON(http.StatusOK, news)
 }

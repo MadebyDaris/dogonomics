@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"os"
 
+	_ "github.com/MadebyDaris/dogonomics/DogonomicsProcessing"
 	"github.com/MadebyDaris/dogonomics/controller"
 	"github.com/MadebyDaris/dogonomics/internal/PolygonClient"
+	_ "github.com/MadebyDaris/dogonomics/internal/dataFetcher"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )
