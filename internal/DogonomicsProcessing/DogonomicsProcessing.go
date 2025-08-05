@@ -30,10 +30,14 @@ type StockDetailData struct {
 	AnalyticsData       []ChartDataPoint        `json:"analyticsData"`
 }
 
+// Common structures
 type ChartDataPoint struct {
 	Timestamp time.Time `json:"timestamp"`
-	Value     float64   `json:"value"`
-	Volume    int64     `json:"volume,omitempty"`
+	Open      float64   `json:"open"`
+	High      float64   `json:"high"`
+	Low       float64   `json:"low"`
+	Close     float64   `json:"close"`
+	Volume    int64     `json:"volume"`
 }
 
 type TechnicalIndicator struct {
@@ -43,7 +47,6 @@ type TechnicalIndicator struct {
 	Timestamp time.Time `json:"timestamp"`
 }
 
-// Finnhub API response structures
 type CompanyProfile struct {
 	Country          string  `json:"country"`
 	Currency         string  `json:"currency"`

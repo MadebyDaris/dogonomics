@@ -4,9 +4,15 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/MadebyDaris/dogonomics/internal/DogonomicsFetching"
 	"github.com/MadebyDaris/dogonomics/internal/PolygonClient"
 	"github.com/MadebyDaris/dogonomics/sentAnalysis"
 	"github.com/gin-gonic/gin"
+)
+
+var (
+	finnhubClient    = DogonomicsFetching.NewClient()
+	historicalClient = DogonomicsFetching.NewYahooFinanceClient()
 )
 
 func GetTicker(c *gin.Context) {
@@ -31,12 +37,16 @@ func GetTicker(c *gin.Context) {
 	c.JSON(http.StatusOK, stock)
 }
 
+// GetQuote - Uses Finnhub quote endpoint
 func GetQuote(c *gin.Context) {
 	symbol := c.Param("symbol")
-	stock, _ := PolygonClient.RequestQuote(symbol)
-	c.JSON(http.StatusOK, stock)
+	quote, err := finnhubClient.GetQuote(symbol)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, quote)
 }
-
 func GetNews(c *gin.Context) {
 	symbol := c.Param("symbol")
 	news, _ := sentAnalysis.FetchData(symbol)
