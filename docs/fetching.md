@@ -3,7 +3,7 @@ The project revolves around fetching data from various sources, primarily using 
 
 Here I will go through the different components involved in data fetching, including the use of the different data sources towards a Stock view Data that will recevied in dart and displayed in the app in the StockViewPage widget.
 
-## The different functions and API data:
+## The different structures I use to fetch data from the Finnhub API:
 ### Quotes
 ```go
 type Quote struct {

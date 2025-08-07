@@ -200,7 +200,7 @@ func (y *YahooFinanceClient) GetHistoricalData(symbol string, days int) ([]Dogon
 	params := url.Values{}
 	params.Set("period1", strconv.FormatInt(from.Unix(), 10))
 	params.Set("period2", strconv.FormatInt(now.Unix(), 10))
-	params.Set("interval", "1d")
+	params.Set("interval", "2d")
 	params.Set("includePrePost", "true")
 
 	resp, err := y.HTTPClient.Get(baseURL + "?" + params.Encode())
@@ -213,6 +213,9 @@ func (y *YahooFinanceClient) GetHistoricalData(symbol string, days int) ([]Dogon
 	if err != nil {
 		return nil, err
 	}
+
+	fmt.Println("RAW RESPONSE BODY:")
+	fmt.Println(string(body))
 
 	var yahooResponse YahooResponse
 	if err := json.Unmarshal(body, &yahooResponse); err != nil {

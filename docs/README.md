@@ -46,7 +46,7 @@ Dogonomics aggregates, analyzes, and serves data about dogs, including breeds, s
 
 4. Run the application:
     ```sh
-    go run main.go
+    go run dogonomics.go
     ```
 
 ### Environment Variables

@@ -2,10 +2,10 @@ package PolygonClient
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"time"
 
+	"github.com/MadebyDaris/dogonomics/internal/DogonomicsProcessing"
 	polygon "github.com/polygon-io/client-go/rest"
 	"github.com/polygon-io/client-go/rest/models"
 )
@@ -45,31 +45,39 @@ func RequestTicker(symbol string, date time.Time) (Stock, error) {
 	return stock, nil
 }
 
-func RequestQuote(symbol string) (Stock, error) {
-	// Init client
+// TODO SERVER SYSTEM TO STORE DATA AND REQUEST FROM SERVER
+func RequestHistoricalData(symbol string, days int) ([]DogonomicsProcessing.ChartDataPoint, error) {
+	// init client
 	c := polygon.New(os.Getenv("POLYGON_API_KEY"))
-	// Set params
-	params := models.GetPreviousCloseAggParams{
-		Ticker: symbol,
+
+	now := time.Now().UTC()
+	from := now.AddDate(0, 0, -days)
+	limit := 1000 // max limit for Polygon API
+
+	params := models.GetAggsParams{
+		Ticker:     symbol,
+		Timespan:   "day",
+		From:       models.Millis(from),
+		To:         models.Millis(now),
+		Multiplier: 1,
+		Limit:      &limit,
 	}
-	// Make request
-	res, err := c.GetPreviousCloseAgg(context.Background(), &params)
+	// make request
+	res, err := c.GetAggs(context.Background(), &params)
 	if err != nil {
-		return Stock{}, err
+		return []DogonomicsProcessing.ChartDataPoint{}, err
 	}
-	// Check if results exist
-	if len(res.Results) == 0 {
-		return Stock{}, fmt.Errorf("no results for %s", symbol)
+	// Build and return the ChartDataPoint slice
+	var chartData []DogonomicsProcessing.ChartDataPoint
+	for _, agg := range res.Results {
+		chartData = append(chartData, DogonomicsProcessing.ChartDataPoint{
+			Close:     agg.Close,
+			Open:      agg.Open,
+			Low:       agg.Low,
+			High:      agg.High,
+			Volume:    int64(agg.Volume),
+			Timestamp: time.Time(agg.Timestamp),
+		})
 	}
-	data := res.Results[0] // First (and usually only) item
-	// Construct and return Stock
-	stock := Stock{
-		Symbol:             symbol,
-		Current:            data.Close,
-		High:               data.High,
-		Low:                data.Low,
-		OpenPrice:          data.Open,
-		PreviousClosePrice: data.Close, // since it's previous close
-	}
-	return stock, nil
+	return chartData, nil
 }
