@@ -4,13 +4,10 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/MadebyDaris/dogonomics/BertInference"
 	"github.com/MadebyDaris/dogonomics/controller"
 	"github.com/MadebyDaris/dogonomics/internal/DogonomicsFetching"
-<<<<<<< HEAD
 	"github.com/MadebyDaris/dogonomics/sentAnalysis"
-
-=======
->>>>>>> 971fefbb4210a659c21f0046baee98ad84b3276f
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )
@@ -33,11 +30,7 @@ func main() {
 	r.GET("/ticker/:symbol", controller.GetTicker)
 	r.GET("/quote/:symbol", controller.GetQuote)
 	r.GET("/finnews/:symbol", controller.GetNews)
-<<<<<<< HEAD
 	r.GET("/finnewsBert/:symbol", controller.GetNewsSentimentBERT)
-=======
-
->>>>>>> 971fefbb4210a659c21f0046baee98ad84b3276f
 	r.GET("/stock/:symbol", controller.GetStockDetail)      // Main endpoint with all data
 	r.GET("/profile/:symbol", controller.GetCompanyProfile) // Company profile
 	r.GET("/chart/:symbol", controller.GetChartData)        // Historical chart data
@@ -53,6 +46,13 @@ func main() {
 		}
 		c.JSON(200, gin.H{"message": "Test successful", "data": stock})
 	})
+	r.GET("/test-sentiment", func(c *gin.Context) {
+		result := sentAnalysis.Examplef()
+		c.JSON(200, gin.H{
+			"message": "Sentiment analysis test completed",
+			"result":  result,
+		})
+	})
 
 	fmt.Println("Starting Dogonomics API server...")
 	fmt.Println("Available endpoints:")
@@ -63,6 +63,12 @@ func main() {
 	fmt.Println("  GET /news/:symbol - Company news")
 	fmt.Println("  GET /sentiment/:symbol - News sentiment")
 	fmt.Println("  GET /health - Health check")
+
+	defer func() {
+		fmt.Println("Shutting down server...")
+		BertInference.CleanupBERT()
+		fmt.Println("Cleanup completed")
+	}()
 
 	r.Run()
 }

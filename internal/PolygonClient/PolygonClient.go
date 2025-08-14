@@ -68,11 +68,7 @@ func RequestHistoricalData(symbol string, days int) ([]DogonomicsProcessing.Char
 		return []DogonomicsProcessing.ChartDataPoint{}, err
 	}
 	// Build and return the ChartDataPoint slice
-<<<<<<< HEAD
-	var chartData = []DogonomicsProcessing.ChartDataPoint{}
-=======
-	var chartData []DogonomicsProcessing.ChartDataPoint
->>>>>>> 971fefbb4210a659c21f0046baee98ad84b3276f
+	chartData := []DogonomicsProcessing.ChartDataPoint{}
 	for _, agg := range res.Results {
 		chartData = append(chartData, DogonomicsProcessing.ChartDataPoint{
 			Close:     agg.Close,
