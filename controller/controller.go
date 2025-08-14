@@ -48,17 +48,54 @@ func GetQuote(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, quote)
 }
+
 func GetNews(c *gin.Context) {
 	symbol := c.Param("symbol")
-	news, _ := sentAnalysis.FetchData(symbol)
+	news, err := sentAnalysis.FetchData(symbol)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
 	c.JSON(http.StatusOK, news)
 }
 
 func GetNewsSentimentBERT(c *gin.Context) {
 	symbol := c.Param("symbol")
-	news, _ := sentAnalysis.FetchData(symbol)
-	sentAnalysis.RunBERTInferenceONNX(news[0].Title, "./sentAnalysis/DoggoFinBERT.onnx", "./sentAnalysis/finbert/vocab.txt")
-	c.JSON(http.StatusOK, news)
+
+	// Fetch and analyze sentiment
+	analysis, err := sentAnalysis.FetchAndAnalyzeNews(symbol)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"sentiment_analysis_error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"symbol":             analysis.Symbol,
+		"sentiment_analysis": analysis,
+		"message":            "Sentiment analysis completed successfully",
+	})
+}
+
+func GetSentimentOnly(c *gin.Context) {
+	symbol := c.Param("symbol")
+	text := c.Query("text")
+
+	if text == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "text parameter is required"})
+		return
+	}
+
+	sentiment, err := sentAnalysis.RunBERTInferenceONNX(text, "./sentAnalysis/DoggoFinBERT.onnx", "./sentAnalysis/finbert/vocab.txt")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"symbol":    symbol,
+		"text":      text,
+		"sentiment": sentiment,
+	})
 }
 
 func GetStockDetail(c *gin.Context) {
