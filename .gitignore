@@ -1,3 +1,6 @@
 .env
-/sentAnalysis/finbert
-/sentAnalysis/sentAnalysis
+sentAnalysis/finbert
+sentAnalysis/sentAnalysis
+sentAnalysis/DoggoFinBERT.onnx
+/go.sum
+.vscode

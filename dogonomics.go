@@ -6,8 +6,11 @@ import (
 
 	"github.com/MadebyDaris/dogonomics/controller"
 	"github.com/MadebyDaris/dogonomics/internal/DogonomicsFetching"
+<<<<<<< HEAD
 	"github.com/MadebyDaris/dogonomics/sentAnalysis"
 
+=======
+>>>>>>> 971fefbb4210a659c21f0046baee98ad84b3276f
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )
@@ -30,7 +33,11 @@ func main() {
 	r.GET("/ticker/:symbol", controller.GetTicker)
 	r.GET("/quote/:symbol", controller.GetQuote)
 	r.GET("/finnews/:symbol", controller.GetNews)
+<<<<<<< HEAD
 	r.GET("/finnewsBert/:symbol", controller.GetNewsSentimentBERT)
+=======
+
+>>>>>>> 971fefbb4210a659c21f0046baee98ad84b3276f
 	r.GET("/stock/:symbol", controller.GetStockDetail)      // Main endpoint with all data
 	r.GET("/profile/:symbol", controller.GetCompanyProfile) // Company profile
 	r.GET("/chart/:symbol", controller.GetChartData)        // Historical chart data
