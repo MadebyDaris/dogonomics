@@ -1,8 +1,9 @@
+import 'package:dogonomics_frontend/backend/stockHandler.dart';
 import 'package:dogonomics_frontend/backend/user.dart';
 import 'package:dogonomics_frontend/pages/stockview.dart';
 import 'package:dogonomics_frontend/utils/constant.dart';
 import 'package:dogonomics_frontend/utils/tickerData.dart';
-import 'package:dogonomics_frontend/utils/tickerData.dart';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
@@ -59,7 +60,7 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
         controller: _tabController,
           children: tabs.map((tab) {
           if (tab == 'Stocks') {
-            return StockViewTab(stocks: List<Stock>.from(widget.user!.portfolio),);
+            return StockViewTab(stocks: List<Stock>.from(widget.user!.portfolio), userId: widget.user!.id,);
           } else {
             return Center(child: Text('Coming Soon...', style: TextStyle(color: Colors.grey)));
           }

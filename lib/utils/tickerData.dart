@@ -1,3 +1,4 @@
+import 'package:dogonomics_frontend/backend/stockHandler.dart';
 import 'package:dogonomics_frontend/pages/stockview.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';

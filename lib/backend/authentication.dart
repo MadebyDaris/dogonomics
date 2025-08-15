@@ -1,6 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:dogonomics_frontend/backend/stockHandler.dart';
 import 'package:dogonomics_frontend/backend/user.dart';
 import 'package:dogonomics_frontend/pages/frontpage.dart';
+import 'package:dogonomics_frontend/pages/stockview.dart';
+import 'package:dogonomics_frontend/utils/tickerData.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -16,6 +19,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final _usernameController = TextEditingController();
 
   bool _isLoginMode = true;
+  bool _isLoading = false;
+
 
   Future<void> _login() async {
     try {
@@ -31,8 +36,14 @@ class _LoginScreenState extends State<LoginScreen> {
             .collection('users')
             .doc(user.uid)
             .get();
-        
-        final username = userDoc.data()?['username'] ?? '';
+
+        if (userDoc.exists) {
+          final userData = userDoc.data()!;
+          final username = userData['username'] ?? '';
+
+
+        final List<Stock> portfolio = await _loadPortfolioFromFirestore(userData['portfolio'] ?? []);
+
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('userId', user.uid);
         await prefs.setString('userEmail', user.email ?? '');
@@ -41,12 +52,18 @@ class _LoginScreenState extends State<LoginScreen> {
           'id': user.uid,
           'name': username,
           'email': user.email,
-          'portfolio': userDoc.data()?['portfolio'] ?? [],
+          'portfolio': portfolio,
         });
       Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => MyHomePage(title: "Dogonomics", user: myuser,)));
+        }
       }
     } catch (e) {
       print('Login failed: $e');
+      _showErrorDialog('Login failed: ${e.toString()}');
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
@@ -65,6 +82,8 @@ class _LoginScreenState extends State<LoginScreen> {
         await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
           'email': user.email,
           'username': username,
+          'portfolio': [], // Initialize with empty portfolio
+          'createdAt': FieldValue.serverTimestamp(),
         });
 
         // Save locally
@@ -80,10 +99,58 @@ class _LoginScreenState extends State<LoginScreen> {
           'portfolio': [],
         });
       Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => MyHomePage(title: "Dogonomics", user: myuser,)));
-    }
+      }
     } catch (e) {
       print('Signup failed: $e');
+      _showErrorDialog('Signup failed: ${e.toString()}');
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
+  }
+  
+  Future<List<Stock>> _loadPortfolioFromFirestore(List<dynamic> portfolioData) async {
+    List<Stock> stocks = [];
+    
+    for (var stockData in portfolioData) {
+      try {
+        if (stockData is Map<String, dynamic>) {
+          // If we have complete stock data stored
+          stocks.add(Stock.fromMap(stockData));
+        } else if (stockData is String) {
+          // If we only have symbols stored, fetch current data
+          final stock = await fetchSingleStock(
+            symbol: stockData,
+            name: 'Loading...',
+            code: 'ETF',
+          );
+          if (stock != null) {
+            stocks.add(stock);
+          }
+        }
+      } catch (e) {
+        print('Error loading stock data: $e');
+      }
+    }
+    
+    return stocks;
+  }
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Error'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -129,5 +196,91 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       )
     );
+  }
+}
+
+
+// Portfolio Service for Firebase operations
+class PortfolioService {
+  static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  // Add stock to user's portfolio
+  static Future<bool> addStockToPortfolio(String userId, Stock stock) async {
+    try {
+      await _firestore.collection('users').doc(userId).update({
+        'portfolio': FieldValue.arrayUnion([stock.toMap()])
+      });
+      return true;
+    } catch (e) {
+      print('Error adding stock to portfolio: $e');
+      return false;
+    }
+  }
+
+  // Remove stock from user's portfolio
+  static Future<bool> removeStockFromPortfolio(String userId, Stock stock) async {
+    try {
+      await _firestore.collection('users').doc(userId).update({
+        'portfolio': FieldValue.arrayRemove([stock.toMap()])
+      });
+      return true;
+    } catch (e) {
+      print('Error removing stock from portfolio: $e');
+      return false;
+    }
+  }
+
+  // Get user's portfolio
+  static Future<List<Stock>> getUserPortfolio(String userId) async {
+    try {
+      final userDoc = await _firestore.collection('users').doc(userId).get();
+      if (userDoc.exists) {
+        final portfolioData = userDoc.data()?['portfolio'] ?? [];
+        List<Stock> stocks = [];
+        
+        for (var stockData in portfolioData) {
+          if (stockData is Map<String, dynamic>) {
+            stocks.add(Stock.fromMap(stockData));
+          }
+        }
+        
+        return stocks;
+      }
+    } catch (e) {
+      print('Error getting user portfolio: $e');
+    }
+    return [];
+  }
+
+  // Update entire portfolio (useful for bulk updates)
+  static Future<bool> updatePortfolio(String userId, List<Stock> stocks) async {
+    try {
+      await _firestore.collection('users').doc(userId).update({
+        'portfolio': stocks.map((stock) => stock.toMap()).toList()
+      });
+      return true;
+    } catch (e) {
+      print('Error updating portfolio: $e');
+      return false;
+    }
+  }
+
+  // Listen to portfolio changes in real-time
+  static Stream<List<Stock>> listenToPortfolio(String userId) {
+    return _firestore.collection('users').doc(userId).snapshots().map((doc) {
+      if (doc.exists) {
+        final portfolioData = doc.data()?['portfolio'] ?? [];
+        List<Stock> stocks = [];
+        
+        for (var stockData in portfolioData) {
+          if (stockData is Map<String, dynamic>) {
+            stocks.add(Stock.fromMap(stockData));
+          }
+        }
+        
+        return stocks;
+      }
+      return <Stock>[];
+    });
   }
 }
