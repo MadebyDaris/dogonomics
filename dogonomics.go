@@ -3,11 +3,12 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/MadebyDaris/dogonomics/BertInference"
 	"github.com/MadebyDaris/dogonomics/controller"
 	"github.com/MadebyDaris/dogonomics/internal/DogonomicsFetching"
-	"github.com/MadebyDaris/dogonomics/sentAnalysis"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )
@@ -24,34 +25,45 @@ func main() {
 		return
 	}
 
-	t := sentAnalysis.Examplef()
-	println(t)
+	fmt.Println("Initializing BERT model...")
+
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		<-c
+		fmt.Println("\nShutting down server...")
+		BertInference.CleanupBERT()
+		fmt.Println("Cleanup completed")
+		os.Exit(0)
+	}()
+
 	r := gin.Default()
+
+	r.Use(func(c *gin.Context) {
+		if c.Request.URL.Path == "/finnewsBert/"+c.Param("symbol") {
+			c.Header("X-Request-Timeout", "40")
+		}
+		c.Next()
+	})
+
 	r.GET("/ticker/:symbol", controller.GetTicker)
 	r.GET("/quote/:symbol", controller.GetQuote)
 	r.GET("/finnews/:symbol", controller.GetNews)
 	r.GET("/finnewsBert/:symbol", controller.GetNewsSentimentBERT)
-	r.GET("/stock/:symbol", controller.GetStockDetail)      // Main endpoint with all data
-	r.GET("/profile/:symbol", controller.GetCompanyProfile) // Company profile
-	r.GET("/chart/:symbol", controller.GetChartData)        // Historical chart data
-	r.GET("/health", controller.GetHealthStatus)            // Historical chart data
+	r.GET("/sentiment/:symbol", controller.GetSentimentOnly)
+	r.GET("/stock/:symbol", controller.GetStockDetail)
+	r.GET("/profile/:symbol", controller.GetCompanyProfile)
+	r.GET("/chart/:symbol", controller.GetChartData)
+	r.GET("/health", controller.GetHealthStatus)
 
-	// Test endpoint
 	r.GET("/test", func(c *gin.Context) {
-		// Test with Apple
 		stock, err := DogonomicsFetching.NewClient().BuildStockDetailData("APPL")
 		if err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
 		}
 		c.JSON(200, gin.H{"message": "Test successful", "data": stock})
-	})
-	r.GET("/test-sentiment", func(c *gin.Context) {
-		result := sentAnalysis.Examplef()
-		c.JSON(200, gin.H{
-			"message": "Sentiment analysis test completed",
-			"result":  result,
-		})
 	})
 
 	fmt.Println("Starting Dogonomics API server...")

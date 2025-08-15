@@ -69,7 +69,7 @@ func FetchData(symbol string) ([]NewsItem, error) {
 	return news, nil
 }
 
-func AnalyzeNewsArticle(title string, content string) (*BertInference.BERTSentiment, error) {
+func AnalyzeNews(title string, content string) (*BertInference.BERTSentiment, error) {
 	fullText := fmt.Sprintf("%s. %s", title, content)
 	text := preprocessText(fullText)
 
@@ -86,7 +86,8 @@ func RunBERTInferenceONNX(text, modelPath, vocabPath string) (*BertInference.BER
 	return BertInference.RunBERTInference(text, modelPath)
 }
 
-func GetStockSentiment(newsItems []NewsItem) *StockSentimentAnalysis {
+// Analyses numerous news items and gives an overall analysis
+func FetchStockSentiment(newsItems []NewsItem) *StockSentimentAnalysis {
 	if len(newsItems) == 0 {
 		return &StockSentimentAnalysis{
 			OverallSentiment: 0.0,
@@ -108,7 +109,7 @@ func GetStockSentiment(newsItems []NewsItem) *StockSentimentAnalysis {
 
 	for articleIndex := range newsItems {
 		article := newsItems[articleIndex]
-		sentiment, err := AnalyzeNewsArticle(article.Title, article.Content)
+		sentiment, err := AnalyzeNews(article.Title, article.Content)
 		if err != nil {
 			log.Printf("Error analyzing news item: %v", err)
 			continue
@@ -187,16 +188,21 @@ func generateRecommendation(sentiment, confidence, positiveRatio, negativeRatio 
 	return "HOLD"
 }
 
-func FetchAndAnalyzeNews(symbol string) (*StockSentimentAnalysis, error) {
+func FetchAndAnalyzeNews(symbol string) ([]NewsItem, error) {
 	newsItems, err := FetchData(symbol)
 	if err != nil {
 		return nil, err
 	}
-	analysis := GetStockSentiment(newsItems)
-	analysis.Symbol = symbol
-	// Add a simple recommendation based on sentiment
 
-	return analysis, nil
+	for news := range newsItems {
+		analysis, err := AnalyzeNews(newsItems[news].Title, newsItems[news].Content)
+		if err != nil {
+			log.Printf("Error analyzing news item: %v", err)
+			continue
+		}
+		newsItems[news].BERTSentiment = *analysis
+	}
+	return newsItems, nil
 }
 
 func preprocessText(text string) string {
@@ -212,31 +218,4 @@ func preprocessText(text string) string {
 	text = strings.ReplaceAll(text, "</p>", " ")
 
 	return text
-}
-
-func Examplef() float64 {
-	// Analyze single news article
-	sentiment, err := AnalyzeNewsArticle(
-		"Apple Reports Strong Q4 Earnings",
-		"Apple Inc. reported better than expected earnings for Q4, with revenue up 15% year over year...",
-	)
-	if err != nil {
-		log.Printf("Error: %v", err)
-		return 0
-	}
-
-	fmt.Printf("Sentiment: %s (%.2f confidence, %.2f score)\n",
-		sentiment.Label, sentiment.Confidence, sentiment.Score)
-
-	// Analyze stock based on news
-	stockAnalysis, err := FetchAndAnalyzeNews("AAPL")
-	if err != nil {
-		log.Printf("Error: %v", err)
-		return 0
-	}
-
-	fmt.Printf("Stock Analysis for %s:\n", stockAnalysis.Symbol)
-	fmt.Printf("Overall Sentiment: %.2f\n", stockAnalysis.OverallSentiment)
-	fmt.Printf("Confidence: %.2f\n", stockAnalysis.Confidence)
-	return stockAnalysis.Confidence
 }
