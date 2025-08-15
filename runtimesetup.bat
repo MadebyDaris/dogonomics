@@ -27,13 +27,13 @@ if exist "C:\onnxruntime\lib\onnxruntime.dll" (
 echo Creating installation directory...
 if not exist "C:\onnxruntime" mkdir "C:\onnxruntime"
 
-echo Downloading ONNX Runtime v1.21.0 for Windows x64...
+echo Downloading ONNX Runtime v1.17.1 for Windows x64...
 echo This may take a few minutes depending on your internet connection...
 
 powershell -Command ^
     "try {" ^
     "    $ProgressPreference = 'SilentlyContinue';" ^
-    "    $url = 'https://github.com/microsoft/onnxruntime/releases/download/v1.21.0/onnxruntime-win-x64-1.21.0.zip';" ^
+    "    $url = 'https://github.com/microsoft/onnxruntime/releases/download/v1.17.1/onnxruntime-win-arm64-1.17.1.zip';" ^
     "    $output = 'C:\onnxruntime\onnxruntime-win-x64-1.21.0.zip';" ^
     "    Invoke-WebRequest -Uri $url -OutFile $output;" ^
     "    Write-Host 'Download completed successfully';" ^
