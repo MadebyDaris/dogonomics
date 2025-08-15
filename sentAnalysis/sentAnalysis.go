@@ -49,7 +49,7 @@ func FetchData(symbol string) ([]NewsItem, error) {
 	params := url.Values{}
 	params.Set("api_token", apiKey)
 	params.Set("s", symbol)
-	params.Set("limit", "5")
+	params.Set("limit", "2")
 	fullURL := fmt.Sprintf("%s?%s", endpoint, params.Encode())
 	resp, respErr := http.Get(fullURL)
 	print(fullURL)
@@ -73,8 +73,9 @@ func AnalyzeNews(title string, content string) (*BertInference.BERTSentiment, er
 	fullText := fmt.Sprintf("%s. %s", title, content)
 	text := preprocessText(fullText)
 
-	if len(fullText) > 800 {
-		fullText = fullText[:800]
+	maxLength := 400
+	if len(fullText) > maxLength {
+		fullText = fullText[:maxLength]
 		if lastPeriod := strings.LastIndex(fullText, "."); lastPeriod > 400 {
 			fullText = fullText[:lastPeriod+1]
 		}
@@ -109,6 +110,8 @@ func FetchStockSentiment(newsItems []NewsItem) *StockSentimentAnalysis {
 
 	for articleIndex := range newsItems {
 		article := newsItems[articleIndex]
+		log.Printf("Processing article %d/%d: %s", articleIndex+1, len(newsItems), article.Title)
+
 		sentiment, err := AnalyzeNews(article.Title, article.Content)
 		if err != nil {
 			log.Printf("Error analyzing news item: %v", err)
@@ -125,12 +128,14 @@ func FetchStockSentiment(newsItems []NewsItem) *StockSentimentAnalysis {
 		totalSentiment += weightedSentiment
 		totalConfidence += sentiment.Confidence
 
-		if sentiment.Label == "positive" {
+		switch sentiment.Label {
+		case "positive":
 			positiveCount++
-		} else if sentiment.Label == "negative" {
+		case "negative":
 			negativeCount++
+		case "neutral":
+			neutralCount++
 		}
-
 	}
 
 	if validArticles == 0 {

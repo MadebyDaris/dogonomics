@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -26,6 +27,8 @@ func main() {
 	}
 
 	fmt.Println("Initializing BERT model...")
+	modelPath := "./sentAnalysis/DoggoFinBERT.onnx"
+	vocabPath := "./sentAnalysis/finbert/vocab.txt"
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
@@ -38,11 +41,21 @@ func main() {
 		os.Exit(0)
 	}()
 
+	if err := BertInference.InitializeBERT(modelPath, vocabPath); err != nil {
+		log.Printf("ERROR: Failed to initialize BERT model: %v", err)
+		log.Printf("Sentiment analysis features will be disabled")
+		log.Printf("Server will continue without sentiment analysis")
+	} else {
+		fmt.Println("BERT model initialized successfully")
+	}
+
+	gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
 
 	r.Use(func(c *gin.Context) {
-		if c.Request.URL.Path == "/finnewsBert/"+c.Param("symbol") {
-			c.Header("X-Request-Timeout", "40")
+		path := c.Request.URL.Path
+		if path == "/finnewsBert/"+c.Param("symbol") || path == "/sentiment/"+c.Param("symbol") {
+			c.Header("X-Request-Timeout", "60s")
 		}
 		c.Next()
 	})
@@ -65,8 +78,22 @@ func main() {
 		}
 		c.JSON(200, gin.H{"message": "Test successful", "data": stock})
 	})
+	r.GET("/test-bert", func(c *gin.Context) {
+		text := "Apple Inc. reported strong quarterly earnings, beating analyst expectations."
+		sentiment, err := BertInference.RunBERTInference(text, modelPath)
+		if err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(200, gin.H{
+			"message": "BERT test completed",
+			"text":    text,
+			"result":  sentiment,
+		})
+	})
 
 	fmt.Println("Starting Dogonomics API server...")
+	fmt.Println("Server will be available at: http://localhost:8080")
 	fmt.Println("Available endpoints:")
 	fmt.Println("  GET /stock/:symbol - Complete stock data")
 	fmt.Println("  GET /quote/:symbol - Current quote")
@@ -76,11 +103,7 @@ func main() {
 	fmt.Println("  GET /sentiment/:symbol - News sentiment")
 	fmt.Println("  GET /health - Health check")
 
-	defer func() {
-		fmt.Println("Shutting down server...")
-		BertInference.CleanupBERT()
-		fmt.Println("Cleanup completed")
-	}()
-
-	r.Run()
+	if err := r.Run(); err != nil {
+		log.Fatalf("Failed to start server: %v", err)
+	}
 }
