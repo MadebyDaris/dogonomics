@@ -1,52 +1,28 @@
 package BertInference
 
 import (
-	"bufio"
 	"fmt"
 	"log"
 	"math"
-	"os"
 	"runtime"
-	"strings"
 	"sync"
-	"unicode"
 
 	ort "github.com/yalue/onnxruntime_go"
 )
 
-func LoadVocab(path string) (map[string]int, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	vocab := make(map[string]int)
-	scanner := bufio.NewScanner(file)
-	index := 0
-	for scanner.Scan() {
-		token := scanner.Text()
-		vocab[token] = index
-		index++
-	}
-	if err := scanner.Err(); err != nil {
-		return nil, err
-	}
-	return vocab, nil
-}
-
 type BERTSentiment struct {
-	Label      string  `json:"label"`      // "positive", "negative", "neutral"
-	Confidence float64 `json:"confidence"` // 0.0 to 1.0
-	Score      float64 `json:"score"`      // Sentiment score from -1 to 1
+	Label      string  `json:"label"`
+	Confidence float64 `json:"confidence"`
+	Score      float64 `json:"score"`
 }
 type BERTModel struct {
-	session       *ort.DynamicAdvancedSession
-	vocab         map[string]int
-	isInitialized bool
-	mutex         sync.RWMutex
-	inputNames    []string
-	outputNames   []string
+	session        *ort.DynamicAdvancedSession
+	vocab          map[string]int
+	isInitialized  bool
+	mutex          sync.RWMutex
+	inputNames     []string
+	outputNames    []string
+	inferenceMutex sync.Mutex
 }
 
 var globalModel = &BERTModel{}
@@ -59,7 +35,6 @@ func InitializeBERT(modelPath, vocabPath string) error {
 		return nil
 	}
 
-	// Set the path based on your platform
 	err := setPlatformSpecificLibraryPath()
 	if err != nil {
 		return fmt.Errorf("failed to set library path: %v", err)
@@ -71,7 +46,6 @@ func InitializeBERT(modelPath, vocabPath string) error {
 		return fmt.Errorf("failed to initialize ONNX Runtime: %v", err)
 	}
 
-	// Load vocabulary
 	globalModel.vocab, err = LoadVocab(vocabPath)
 	if err != nil {
 		return fmt.Errorf("failed to load vocab: %v", err)
@@ -80,12 +54,11 @@ func InitializeBERT(modelPath, vocabPath string) error {
 	globalModel.inputNames = []string{"input_ids", "attention_mask", "token_type_ids"}
 	globalModel.outputNames = []string{"logits"}
 
-	// Using DynamicAdvancedSession is far easier
 	globalModel.session, err = ort.NewDynamicAdvancedSession(
 		modelPath,
 		globalModel.inputNames,
 		globalModel.outputNames,
-		nil, // Use default session options
+		nil,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create ONNX session: %v", err)
@@ -127,27 +100,37 @@ func RunBERTInference(text string, modelPath string) (*BERTSentiment, error) {
 	initialized := globalModel.isInitialized
 	globalModel.mutex.RUnlock()
 
-	// Initialize if not done
 	if !initialized {
-		if err := InitializeBERT(modelPath, "./sentAnalysis/finbert/vocab.txt"); err != nil {
-			return nil, fmt.Errorf("initialization failed: %v", err)
+		globalModel.mutex.Lock()
+		if !globalModel.isInitialized {
+			if err := initializeBERTUnsafe(modelPath, "./sentAnalysis/finbert/vocab.txt"); err != nil {
+				globalModel.mutex.Unlock()
+				return nil, fmt.Errorf("initialization failed: %v", err)
+			}
 		}
+		globalModel.mutex.Unlock()
 	}
+	globalModel.inferenceMutex.Lock()
+	defer globalModel.inferenceMutex.Unlock()
 
 	globalModel.mutex.RLock()
 	defer globalModel.mutex.RUnlock()
 
+	if !globalModel.isInitialized {
+		return nil, fmt.Errorf("model not initialized")
+	}
+
 	// Encode input
 	inputIds, attentionMask, tokenTypeIds := BertEncode(text, globalModel.vocab, 256)
 
-	inputIdsFloat := make([]float32, len(inputIds))
-	attentionMaskFloat := make([]float32, len(attentionMask))
-	tokenTypeIdsFloat := make([]float32, len(tokenTypeIds))
+	inputIdsFloat := make([]int64, len(inputIds))
+	attentionMaskFloat := make([]int64, len(attentionMask))
+	tokenTypeIdsFloat := make([]int64, len(tokenTypeIds))
 
 	for i := range inputIds {
-		inputIdsFloat[i] = float32(inputIds[i])
-		attentionMaskFloat[i] = float32(attentionMask[i])
-		tokenTypeIdsFloat[i] = float32(tokenTypeIds[i])
+		inputIdsFloat[i] = int64(inputIds[i])
+		attentionMaskFloat[i] = int64(attentionMask[i])
+		tokenTypeIdsFloat[i] = int64(tokenTypeIds[i])
 	}
 
 	inputShape := ort.NewShape(1, 256)
@@ -176,9 +159,15 @@ func RunBERTInference(text string, modelPath string) (*BERTSentiment, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create output tensor: %v", err)
 	}
-	defer outputTensor.Destroy()
+	defer func() {
+		if outputTensor != nil {
+			outputTensor.Destroy()
+		}
+	}()
 
+	//
 	// Prepare inputs and outputs slices for the Run method
+	//
 	inputs := []ort.Value{inputTensor, attentionTensor, tokenTypeTensor}
 	outputs := []ort.Value{outputTensor}
 
@@ -191,103 +180,47 @@ func RunBERTInference(text string, modelPath string) (*BERTSentiment, error) {
 	if len(logits) < 3 {
 		return nil, fmt.Errorf("insufficient logits: got %d, expected at least 3", len(logits))
 	}
-	if len(logits) < 3 {
-		return nil, fmt.Errorf("insufficient logits: got %d, expected at least 3", len(logits))
-	}
 
 	fmt.Printf("BERT Logits: %v\n", logits[:3])
 	return ProcessLogits(logits[:3]), nil
 }
 
-func encode_word(word string, vocab map[string]int) []string {
-	tokens := []string{}
-
-	for len(word) > 0 {
-		i := len(word)
-		found := false
-
-		for i > 0 {
-			sub := word[:i]
-			if _, exists := vocab[sub]; exists {
-				found = true
-				tokens = append(tokens, sub)
-				word = word[i:]
-				if len(word) > 0 {
-					word = "##" + word
-				}
-				break
-			}
-			i--
-		}
-		if !found {
-			tokens = append(tokens, "[UNK]")
-			break
-		}
-	}
-	return tokens
-}
-
-func TokenizeBert(text string, vocab map[string]int) []string {
-	tokens := []string{}
-	word := ""
-
-	for _, char := range text {
-		if unicode.IsLetter(char) || unicode.IsDigit(char) {
-			word += string(char)
-		} else {
-			if word != "" {
-				encoded_word := encode_word(strings.ToLower(word), vocab)
-				tokens = append(tokens, encoded_word...)
-				word = ""
-			}
-			if !unicode.IsSpace(char) {
-				tokens = append(tokens, string(char))
-			}
-		}
+func initializeBERTUnsafe(modelPath, vocabPath string) error {
+	// Set the path based on your platform
+	err := setPlatformSpecificLibraryPath()
+	if err != nil {
+		return fmt.Errorf("failed to set library path: %v", err)
 	}
 
-	if word != "" {
-		tokens = append(tokens, word)
+	log.Println("Attempting to initialize ONNX Runtime environment...")
+	err2 := ort.InitializeEnvironment()
+	if err2 != nil {
+		return fmt.Errorf("failed to initialize ONNX Runtime: %v", err2)
 	}
 
-	return tokens
-}
-
-func BertEncode(text string, vocab map[string]int, maxLen int) ([]int64, []int64, []int64) {
-	tokens := []string{"[CLS]"}
-	tokens = append(tokens, TokenizeBert(text, vocab)...)
-	tokens = append(tokens, "[SEP]")
-
-	inputIds := make([]int64, 0, len(tokens))
-	for _, token := range tokens {
-		id, exists := vocab[token]
-		if !exists {
-			id = vocab["[UNK]"]
-		}
-		inputIds = append(inputIds, int64(id))
+	// Load vocabulary
+	globalModel.vocab, err = LoadVocab(vocabPath)
+	if err != nil {
+		return fmt.Errorf("failed to load vocab: %v", err)
 	}
 
-	attentionMask := make([]int64, len(inputIds))
-	for i := range attentionMask {
-		attentionMask[i] = 1
+	globalModel.inputNames = []string{"input_ids", "attention_mask", "token_type_ids"}
+	globalModel.outputNames = []string{"logits"}
+
+	// Using DynamicAdvancedSession
+	globalModel.session, err = ort.NewDynamicAdvancedSession(
+		modelPath,
+		globalModel.inputNames,
+		globalModel.outputNames,
+		nil, // Use default session options
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create ONNX session: %v", err)
 	}
 
-	tokenTypeIDs := make([]int64, len(inputIds))
-
-	for len(inputIds) < maxLen {
-		inputIds = append(inputIds, 0)
-		attentionMask = append(attentionMask, 0)
-		tokenTypeIDs = append(tokenTypeIDs, 0)
-	}
-
-	// Truncate if too long
-	if len(inputIds) > maxLen {
-		inputIds = inputIds[:maxLen]
-		attentionMask = attentionMask[:maxLen]
-		tokenTypeIDs = tokenTypeIDs[:maxLen]
-	}
-
-	return inputIds, attentionMask, tokenTypeIDs
+	globalModel.isInitialized = true
+	log.Println("BERT model initialized successfully")
+	return nil
 }
 
 func ProcessLogits(logits []float32) *BERTSentiment {
