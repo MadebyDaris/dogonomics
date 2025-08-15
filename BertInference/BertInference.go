@@ -6,6 +6,7 @@ import (
 	"math"
 	"runtime"
 	"sync"
+	"time"
 
 	ort "github.com/yalue/onnxruntime_go"
 )
@@ -25,28 +26,39 @@ type BERTModel struct {
 	inferenceMutex sync.Mutex
 }
 
-var globalModel = &BERTModel{}
+var (
+	globalModel    = &BERTModel{}
+	envInitialized = false
+	envMutex       = sync.Mutex{}
+)
 
 func InitializeBERT(modelPath, vocabPath string) error {
 	globalModel.mutex.Lock()
 	defer globalModel.mutex.Unlock()
 
 	if globalModel.isInitialized {
+		log.Println("BERT model already initialized")
 		return nil
 	}
+	envMutex.Lock()
+	if !envInitialized {
+		err := setPlatformSpecificLibraryPath()
+		if err != nil {
+			envMutex.Unlock()
+			return fmt.Errorf("failed to set library path: %v", err)
+		}
 
-	err := setPlatformSpecificLibraryPath()
-	if err != nil {
-		return fmt.Errorf("failed to set library path: %v", err)
+		log.Println("Attempting to initialize ONNX Runtime environment...")
+		err2 := ort.InitializeEnvironment()
+		if err2 != nil {
+			envMutex.Unlock()
+			return fmt.Errorf("failed to initialize ONNX Runtime: %v", err)
+		}
 	}
+	envMutex.Unlock()
 
-	log.Println("Attempting to initialize ONNX Runtime environment...")
-	err2 := ort.InitializeEnvironment()
-	if err2 != nil {
-		return fmt.Errorf("failed to initialize ONNX Runtime: %v", err)
-	}
-
-	globalModel.vocab, err = LoadVocab(vocabPath)
+	vocab, err := LoadVocab(vocabPath)
+	globalModel.vocab = vocab
 	if err != nil {
 		return fmt.Errorf("failed to load vocab: %v", err)
 	}
@@ -90,12 +102,42 @@ func CleanupBERT() {
 		globalModel.session.Destroy()
 		globalModel.session = nil
 	}
-	ort.DestroyEnvironment()
+
+	envMutex.Lock()
+	if envInitialized {
+		ort.DestroyEnvironment()
+		envInitialized = false
+	}
+	envMutex.Unlock()
+
 	globalModel.isInitialized = false
 	log.Println("BERT model cleaned up")
 }
 
 func RunBERTInference(text string, modelPath string) (*BERTSentiment, error) {
+	timeout := time.After(30 * time.Second)
+	resultChan := make(chan *BERTSentiment, 1)
+	errorChan := make(chan error, 1)
+
+	go func() {
+		result, err := runBERTInferenceInternal(text, modelPath)
+		if err != nil {
+			errorChan <- err
+		} else {
+			resultChan <- result
+		}
+	}()
+	select {
+	case result := <-resultChan:
+		return result, nil
+	case err := <-errorChan:
+		return nil, err
+	case <-timeout:
+		return nil, fmt.Errorf("BERT inference timeout after 30 seconds")
+	}
+}
+
+func runBERTInferenceInternal(text string, modelPath string) (*BERTSentiment, error) {
 	globalModel.mutex.RLock()
 	initialized := globalModel.isInitialized
 	globalModel.mutex.RUnlock()
@@ -103,57 +145,66 @@ func RunBERTInference(text string, modelPath string) (*BERTSentiment, error) {
 	if !initialized {
 		globalModel.mutex.Lock()
 		if !globalModel.isInitialized {
-			if err := initializeBERTUnsafe(modelPath, "./sentAnalysis/finbert/vocab.txt"); err != nil {
-				globalModel.mutex.Unlock()
-				return nil, fmt.Errorf("initialization failed: %v", err)
-			}
+			return nil, fmt.Errorf("BERT model not initialized - call InitializeBERT first")
 		}
 		globalModel.mutex.Unlock()
 	}
+
+	// Serialize inference to prevent concurrent access issues
 	globalModel.inferenceMutex.Lock()
 	defer globalModel.inferenceMutex.Unlock()
 
 	globalModel.mutex.RLock()
-	defer globalModel.mutex.RUnlock()
-
 	if !globalModel.isInitialized {
+		globalModel.mutex.RUnlock()
 		return nil, fmt.Errorf("model not initialized")
 	}
 
 	// Encode input
 	inputIds, attentionMask, tokenTypeIds := BertEncode(text, globalModel.vocab, 256)
 
-	inputIdsFloat := make([]int64, len(inputIds))
-	attentionMaskFloat := make([]int64, len(attentionMask))
-	tokenTypeIdsFloat := make([]int64, len(tokenTypeIds))
+	inputIdsInt := make([]int64, len(inputIds))
+	attentionMaskInt := make([]int64, len(attentionMask))
+	tokenTypeIdsInt := make([]int64, len(tokenTypeIds))
+	globalModel.mutex.RUnlock()
 
 	for i := range inputIds {
-		inputIdsFloat[i] = int64(inputIds[i])
-		attentionMaskFloat[i] = int64(attentionMask[i])
-		tokenTypeIdsFloat[i] = int64(tokenTypeIds[i])
+		inputIdsInt[i] = int64(inputIds[i])
+		attentionMaskInt[i] = int64(attentionMask[i])
+		tokenTypeIdsInt[i] = int64(tokenTypeIds[i])
 	}
 
 	inputShape := ort.NewShape(1, 256)
 
-	inputTensor, err := ort.NewTensor(inputShape, inputIdsFloat)
+	inputTensor, err := ort.NewTensor(inputShape, inputIdsInt)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create input tensor: %v", err)
 	}
-	defer inputTensor.Destroy()
+	defer func() {
+		if inputTensor != nil {
+			inputTensor.Destroy()
+		}
+	}()
 
-	attentionTensor, err := ort.NewTensor(inputShape, attentionMaskFloat)
+	attentionTensor, err := ort.NewTensor(inputShape, attentionMaskInt)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create attention tensor: %v", err)
 	}
-	defer attentionTensor.Destroy()
-
-	tokenTypeTensor, err := ort.NewTensor(inputShape, tokenTypeIdsFloat)
+	defer func() {
+		if attentionTensor != nil {
+			attentionTensor.Destroy()
+		}
+	}()
+	tokenTypeTensor, err := ort.NewTensor(inputShape, tokenTypeIdsInt)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create token type tensor: %v", err)
 	}
-	defer tokenTypeTensor.Destroy()
+	defer func() {
+		if tokenTypeTensor != nil {
+			tokenTypeTensor.Destroy()
+		}
+	}()
 
-	// 3 classes: negative, neutral, positive
 	outputShape := ort.NewShape(1, 3)
 	outputTensor, err := ort.NewEmptyTensor[float32](outputShape)
 	if err != nil {
@@ -171,7 +222,14 @@ func RunBERTInference(text string, modelPath string) (*BERTSentiment, error) {
 	inputs := []ort.Value{inputTensor, attentionTensor, tokenTypeTensor}
 	outputs := []ort.Value{outputTensor}
 
+	globalModel.mutex.RLock()
+	if globalModel.session == nil {
+		globalModel.mutex.RUnlock()
+		return nil, fmt.Errorf("session is nil")
+	}
+
 	err = globalModel.session.Run(inputs, outputs)
+	globalModel.mutex.RUnlock()
 	if err != nil {
 		return nil, fmt.Errorf("failed to run inference: %v", err)
 	}
