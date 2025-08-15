@@ -6,7 +6,7 @@ require (
 	github.com/gin-gonic/gin v1.10.1
 	github.com/joho/godotenv v1.5.1
 	github.com/polygon-io/client-go v1.16.16
-	github.com/yalue/onnxruntime_go v1.21.0
+	github.com/yalue/onnxruntime_go v1.19.0
 )
 
 require (

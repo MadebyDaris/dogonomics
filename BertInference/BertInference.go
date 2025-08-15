@@ -65,6 +65,7 @@ func InitializeBERT(modelPath, vocabPath string) error {
 		return fmt.Errorf("failed to set library path: %v", err)
 	}
 
+	log.Println("Attempting to initialize ONNX Runtime environment...")
 	err2 := ort.InitializeEnvironment()
 	if err2 != nil {
 		return fmt.Errorf("failed to initialize ONNX Runtime: %v", err)
@@ -99,11 +100,9 @@ func InitializeBERT(modelPath, vocabPath string) error {
 func setPlatformSpecificLibraryPath() error {
 	switch runtime.GOOS {
 	case "windows":
-		ort.SetSharedLibraryPath("onnxruntime.dll")
+		ort.SetSharedLibraryPath("C:/onnxruntime/lib/onnxruntime.dll")
 	case "linux":
 		ort.SetSharedLibraryPath("libonnxruntime.so")
-	case "darwin":
-		ort.SetSharedLibraryPath("libonnxruntime.dylib")
 	default:
 		return fmt.Errorf("unsupported operating system: %s", runtime.GOOS)
 	}
