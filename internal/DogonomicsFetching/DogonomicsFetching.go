@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -44,6 +45,10 @@ func NewClient() *Client {
 // It constructs the URL with the API key and parameters, makes the GET request,
 // and returns the response body or an error if the request fails.
 func (c *Client) makeRequest(endpoint string, params map[string]string) ([]byte, error) {
+	if c.APIKey == "" {
+		return nil, fmt.Errorf("FINNHUB_API_KEY environment variable not set")
+	}
+
 	u, err := url.Parse(baseURL + endpoint)
 	if err != nil {
 		return nil, err
@@ -79,6 +84,10 @@ func (c *Client) GetCompanyProfile(symbol string) (*DogonomicsProcessing.Company
 
 	var profile DogonomicsProcessing.CompanyProfile
 	err = json.Unmarshal(data, &profile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse company profile JSON: %v", err)
+	}
+
 	return &profile, err
 }
 
@@ -101,11 +110,17 @@ func (c *Client) GetBasicFinancials(symbol string) (*DogonomicsProcessing.BasicF
 		"metric": "all",
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get basic financials: %v", err)
 	}
 
 	var financials DogonomicsProcessing.BasicFinancials
 	err = json.Unmarshal(data, &financials)
+	if err != nil {
+		// Log the raw JSON for debugging
+		log.Printf("Failed to parse financials JSON: %v", err)
+		log.Printf("Raw JSON data: %s", string(data))
+		return nil, fmt.Errorf("failed to parse basic financials JSON: %v", err)
+	}
 	return &financials, err
 }
 
@@ -130,13 +145,17 @@ func (c *Client) BuildStockDetailData(symbol string) (*DogonomicsProcessing.Stoc
 		return nil, fmt.Errorf("failed to get quote: %v", err)
 	}
 
-	var peRatio, eps float64
+		var peRatio, eps float64
 	if financials != nil {
 		if val, exists := financials.Metric["peBasicExclExtraTTM"]; exists {
-			peRatio = val
+			if v, ok := val.(float64); ok {
+				peRatio = v
+			}
 		}
-		if val, exists := financials.Metric["epsBasicExclExtraaTTM"]; exists {
-			eps = val
+		if val, exists := financials.Metric["epsBasicExclExtraTTM"]; exists {
+			if v, ok := val.(float64); ok {
+				eps = v
+			}
 		}
 	}
 	return &DogonomicsProcessing.StockDetailData{

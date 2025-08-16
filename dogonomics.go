@@ -26,6 +26,11 @@ func main() {
 		return
 	}
 
+	// Initialize clients
+	finnhubClient := DogonomicsFetching.NewClient()
+	controller.Init(finnhubClient)
+
+
 	fmt.Println("Initializing BERT model...")
 	modelPath := "./sentAnalysis/DoggoFinBERT.onnx"
 	vocabPath := "./sentAnalysis/finbert/vocab.txt"

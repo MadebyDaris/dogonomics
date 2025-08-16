@@ -1,6 +1,8 @@
 package DogonomicsProcessing
 
 import (
+	"encoding/json"
+	"strconv"
 	"time"
 
 	"github.com/MadebyDaris/dogonomics/sentAnalysis"
@@ -72,10 +74,48 @@ type QuarterlyData struct {
 	V      float64 `json:"v"`
 }
 
+type FlexibleFloat float64
+
+func (ff *FlexibleFloat) UnmarshalJSON(data []byte) error {
+	// Try to unmarshal as float64 first
+	var f float64
+	if err := json.Unmarshal(data, &f); err == nil {
+		*ff = FlexibleFloat(f)
+		return nil
+	}
+
+	// Try to unmarshal as string
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
+	}
+
+	// Handle empty string or "N/A" cases
+	if s == "" || s == "N/A" || s == "null" {
+		*ff = FlexibleFloat(0)
+		return nil
+	}
+
+	// Try to parse string as float
+	if parsed, err := strconv.ParseFloat(s, 64); err == nil {
+		*ff = FlexibleFloat(parsed)
+		return nil
+	}
+
+	// Default to 0 if parsing fails
+	*ff = FlexibleFloat(0)
+	return nil
+}
+
+// Float64 converts FlexibleFloat to float64
+func (ff FlexibleFloat) Float64() float64 {
+	return float64(ff)
+}
+
 type BasicFinancials struct {
 	Series struct {
 		Annual    map[string][]AnnualData    `json:"annual"`
 		Quarterly map[string][]QuarterlyData `json:"quarterly"`
 	} `json:"series"`
-	Metric map[string]float64 `json:"metric"`
+	Metric map[string]interface{} `json:"metric"`
 }
