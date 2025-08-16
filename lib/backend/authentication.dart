@@ -207,9 +207,32 @@ class PortfolioService {
   // Add stock to user's portfolio
   static Future<bool> addStockToPortfolio(String userId, Stock stock) async {
     try {
-      await _firestore.collection('users').doc(userId).update({
-        'portfolio': FieldValue.arrayUnion([stock.toMap()])
-      });
+      final userDoc = await _firestore.collection('users').doc(userId).get();
+      if (userDoc.exists) {
+        final portfolioData = userDoc.data()?['portfolio'] ?? [];
+        List<Stock> currentPortfolio = [];
+        
+        for (var stockData in portfolioData) {
+          if (stockData is Map<String, dynamic>) {
+            currentPortfolio.add(Stock.fromMap(stockData));
+          }
+        }
+        int existingIndex = currentPortfolio.indexWhere((s) => s.symbol == stock.symbol);
+        
+        if (existingIndex != -1) {
+          currentPortfolio[existingIndex] = currentPortfolio[existingIndex].copyWith(
+            quantity: currentPortfolio[existingIndex].quantity + stock.quantity,
+            price: stock.price,
+            change: stock.change,
+          );
+        } else {
+          currentPortfolio.add(stock);
+        }
+        
+        await _firestore.collection('users').doc(userId).update({
+          'portfolio': currentPortfolio.map((s) => s.toMap()).toList()
+        });
+      }
       return true;
     } catch (e) {
       print('Error adding stock to portfolio: $e');
@@ -217,12 +240,39 @@ class PortfolioService {
     }
   }
 
-  // Remove stock from user's portfolio
-  static Future<bool> removeStockFromPortfolio(String userId, Stock stock) async {
+  static Future<bool> removeStockFromPortfolio(String userId, Stock stock, {int? quantityToRemove}) async {
     try {
-      await _firestore.collection('users').doc(userId).update({
-        'portfolio': FieldValue.arrayRemove([stock.toMap()])
-      });
+      final userDoc = await _firestore.collection('users').doc(userId).get();
+      if (userDoc.exists){
+        final portfolioData = userDoc.data()?['portfolio'] ?? [];
+        List<Stock> currentPortfolio = [];
+
+                for (var stockData in portfolioData) {
+          if (stockData is Map<String, dynamic>) {
+            currentPortfolio.add(Stock.fromMap(stockData));
+          }
+        }
+        
+        // Find and update/remove stock
+        int existingIndex = currentPortfolio.indexWhere((s) => s.symbol == stock.symbol);
+        
+        if (existingIndex != -1) {
+          int removeQty = quantityToRemove ?? stock.quantity;
+          int newQuantity = currentPortfolio[existingIndex].quantity - removeQty;
+          
+          if (newQuantity <= 0) {
+            currentPortfolio.removeAt(existingIndex);
+          } else {
+            currentPortfolio[existingIndex] = currentPortfolio[existingIndex].copyWith(
+              quantity: newQuantity,
+            );
+          }
+          
+          await _firestore.collection('users').doc(userId).update({
+            'portfolio': currentPortfolio.map((s) => s.toMap()).toList()
+          });
+        }
+      }
       return true;
     } catch (e) {
       print('Error removing stock from portfolio: $e');
@@ -230,7 +280,6 @@ class PortfolioService {
     }
   }
 
-  // Get user's portfolio
   static Future<List<Stock>> getUserPortfolio(String userId) async {
     try {
       final userDoc = await _firestore.collection('users').doc(userId).get();
@@ -253,14 +302,39 @@ class PortfolioService {
   }
 
   // Update entire portfolio (useful for bulk updates)
-  static Future<bool> updatePortfolio(String userId, List<Stock> stocks) async {
+static Future<bool> updateStockQuantity(String userId, String symbol, int newQuantity) async {
     try {
-      await _firestore.collection('users').doc(userId).update({
-        'portfolio': stocks.map((stock) => stock.toMap()).toList()
-      });
+      final userDoc = await _firestore.collection('users').doc(userId).get();
+      if (userDoc.exists) {
+        final portfolioData = userDoc.data()?['portfolio'] ?? [];
+        List<Stock> currentPortfolio = [];
+        
+        for (var stockData in portfolioData) {
+          if (stockData is Map<String, dynamic>) {
+            currentPortfolio.add(Stock.fromMap(stockData));
+          }
+        }
+        
+        // Find and update stock quantity
+        int existingIndex = currentPortfolio.indexWhere((s) => s.symbol == symbol);
+        
+        if (existingIndex != -1) {
+          if (newQuantity <= 0) {
+            currentPortfolio.removeAt(existingIndex);
+          } else {
+            currentPortfolio[existingIndex] = currentPortfolio[existingIndex].copyWith(
+              quantity: newQuantity,
+            );
+          }
+          
+          await _firestore.collection('users').doc(userId).update({
+            'portfolio': currentPortfolio.map((s) => s.toMap()).toList()
+          });
+        }
+      }
       return true;
     } catch (e) {
-      print('Error updating portfolio: $e');
+      print('Error updating stock quantity: $e');
       return false;
     }
   }

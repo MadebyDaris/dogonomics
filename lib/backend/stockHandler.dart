@@ -4,27 +4,21 @@ import 'package:dogonomics_frontend/utils/constant.dart';
 import 'package:dogonomics_frontend/utils/logoManager.dart';
 import 'dart:io';
 
-class StockCard extends StatefulWidget  {
-  final String symbol, name, code;
-  final double price, change;
-  final bool isPositive;
-  final Color color;
+import '../pages/stockDetails.dart';
+import '../utils/tickerData.dart';
+
+class StockCard extends StatefulWidget {
+  final Stock stock;
   final VoidCallback? onRemove;
-  final int quantity; // Added quantity field
+  final Function(int)? onQuantityChanged;
 
   const StockCard({
-    required this.symbol,
-    required this.name,
-    required this.code,
-    required this.price,
-    required this.change,
-    required this.quantity,
-    required this.isPositive,
-    required this.color,
+    Key? key,
+    required this.stock,
     this.onRemove,
-  });
+    this.onQuantityChanged,
+  }) : super(key: key);
 
-  
   @override
   State<StockCard> createState() => _StockCardState();
 }
@@ -40,7 +34,7 @@ class _StockCardState extends State<StockCard> {
 
   Future<void> _loadLogo() async {
     final logoManager = LogoManager();
-    final path = await logoManager.fetchLogoPath(widget.symbol.toLowerCase());
+    final path = await logoManager.fetchLogoPath(widget.stock.symbol.toLowerCase());
     print('Logo path: $path');
     if (path.isNotEmpty) {
       setState(() {
@@ -48,12 +42,62 @@ class _StockCardState extends State<StockCard> {
       });
     }
   }
+
+  void _showQuantityDialog() {
+    final TextEditingController controller = TextEditingController(
+      text: widget.stock.quantity.toString()
+    );
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Update Quantity for ${widget.stock.symbol}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Current quantity: ${widget.stock.quantity}'),
+            SizedBox(height: 16),
+            TextField(
+              controller: controller,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: 'New Quantity',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final newQuantity = int.tryParse(controller.text);
+              if (newQuantity != null && newQuantity >= 0) {
+                widget.onQuantityChanged?.call(newQuantity);
+                Navigator.pop(context);
+              }
+            },
+            child: Text('Update'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
   return InkWell(
     onTap: () {
-      // Handle stock tap, e.g., navigate to a details page
-      print('Tapped on ${widget.symbol}');
+      print('Tapped on ${widget.stock.symbol}');
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => StockDetailsPage(symbol: widget.stock.symbol),
+          ),
+        );
     },
     borderRadius: BorderRadius.circular(12),   
     child:Container(
@@ -64,7 +108,6 @@ class _StockCardState extends State<StockCard> {
       ),
       child: Row(
         children: [
-          // Symbol of the Ticker and the company image
           Container(
             width: 60,
             height: 60,
@@ -79,82 +122,70 @@ class _StockCardState extends State<StockCard> {
                   : Icon(Icons.image, size: 24, color: Colors.black),
             ),
           ),
-          SizedBox(width: 16),
+          SizedBox(width: 8),
 
           Container(
             padding: EdgeInsets.symmetric(vertical: 8, horizontal: 15),
             decoration: BoxDecoration(
-              color: widget.color,
+              color: Colors.amber.shade700,
               borderRadius: BorderRadius.circular(6),
             ),
             child: Text(
-              widget.symbol,
+              widget.stock.symbol,
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black),
             ),
           ),
+
           SizedBox(width: 16),
+          
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(widget.name, style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-                Text(widget.code, style: TextStyle(color: MAINGREY_LIGHT)),
+                Text(widget.stock.name, style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                Text(widget.stock.code, style: TextStyle(color: MAINGREY_LIGHT)),
               ],
             ),
           ),
+
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Icon(
-                widget.isPositive ? Icons.arrow_drop_up : Icons.arrow_drop_down,
-                color: widget.isPositive ? Colors.green : Colors.red,
+                widget.stock.isPositive ? Icons.arrow_drop_up : Icons.arrow_drop_down,
+                color: widget.stock.isPositive ? Colors.green : Colors.red,
               ),
               Text(
-                '${widget.isPositive ? '+' : '-'}${widget.change.toStringAsFixed(2)}%',
-                style: TextStyle(color: widget.isPositive ? Colors.green : Colors.red),
+                '${widget.stock.isPositive ? '+' : '-'}${widget.stock.change.toStringAsFixed(2)}%',
+                style: TextStyle(color: widget.stock.isPositive ? Colors.green : Colors.red),
               ),
               SizedBox(height: 4),
               Text(
-                '\$${widget.price.toStringAsFixed(2)}',
+                '\$${widget.stock.price.toStringAsFixed(2)}',
                 style: TextStyle(fontSize: 15),
+              ),
+              Text(
+                'Total: \${(widget.stock.price * widget.stock.quantity).toStringAsFixed(2)}',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
               ),
             ],
           ),
-          IconButton(
-            icon: Icon(Icons.close, color: Colors.redAccent),
-            onPressed: () {
-              // Handle remove action (e.g., remove from list)
-              print('Remove ${widget.symbol}');
-            },
-          ),
+          Column(children: [
+
+                IconButton(
+                  icon: Icon(Icons.edit, color: Colors.blueAccent, size: 20),
+                  onPressed: _showQuantityDialog,
+                  tooltip: 'Edit Quantity',
+                ),
+                IconButton(
+                  icon: Icon(Icons.close, color: Colors.redAccent, size: 20),
+                  onPressed: widget.onRemove,
+                  tooltip: 'Remove Stock',
+                ),
+          ],)
         ],
       ),
     )
     );
   }
-}
-
-class UserStock {
-  final StockData stockData;
-  final int quantity;
-
-  UserStock(this.stockData, this.quantity);
-}
-
-Widget buildStockCard(UserStock stock, {VoidCallback? onRemove}) {
-  var positive = false;
-  if (stock.stockData.changePercentage >= 0) {
-    positive = true;
-  }
-  return StockCard(
-    symbol: stock.stockData.symbol,
-    name: stock.stockData.companyName,
-    code: stock.stockData.aboutDescription,
-    price: stock.stockData.currentPrice,
-    change: stock.stockData.changePercentage,
-    quantity: stock.quantity,
-    isPositive: positive,
-    color: Colors.amber.shade700,
-    onRemove: onRemove,
-  );
 }

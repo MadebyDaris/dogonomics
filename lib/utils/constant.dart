@@ -4,3 +4,4 @@ import 'package:flutter/material.dart';
 final MAINGREY = const Color.fromARGB(255, 11, 11, 12);
 final MAINGREY_LIGHT = Colors.grey[600];
 final BACKG_COLOR = const Color.fromARGB(255, 7, 6, 7);
+final ACCENT_COLOR = const Color.fromARGB(255, 30, 255, 0);

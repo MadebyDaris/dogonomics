@@ -150,7 +150,7 @@ class ChartDataPoint {
 }
 
 class DogonomicsAPI {
-  static const String baseUrl = 'http://localhost:8080';
+  static const String baseUrl = 'http://10.0.2.2:8080';
 
   static Future<StockData> fetchStockData(String symbol) async {
     try {
@@ -160,7 +160,7 @@ class DogonomicsAPI {
       ).timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
+      final data = json.decode(response.body);
         return StockData.fromJson(data);
       } else {
         throw Exception('Failed to load stock data: ${response.statusCode}');

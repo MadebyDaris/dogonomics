@@ -15,9 +15,9 @@ import 'dart:convert';
 
 
 class StockViewTab extends StatefulWidget {
-  final List<UserStock> stocks;
-  final String userId; // Add userId parameter
-
+  final List<Stock> stocks;
+  final String userId;
+  
   const StockViewTab({
     super.key, 
     required this.stocks,
@@ -29,7 +29,7 @@ class StockViewTab extends StatefulWidget {
 }
 
 class _StockViewTabState extends State<StockViewTab> {
-  late List<UserStock> _stocks;
+  late List<Stock> _stocks;
   bool _isLoading = false;
   double _totalPortfolioValue = 0.0;
   double _totalDayChange = 0.0;
@@ -44,124 +44,149 @@ class _StockViewTabState extends State<StockViewTab> {
   }
 
   void _calculatePortfolioMetrics() {
-    _totalPortfolioValue = _stocks.fold(0.0, (sum, stock) => sum + (stock.stockData.currentPrice * stock.quantity));
-    _totalDayChange = _stocks.fold(0.0, (sum, stock) => sum + (stock.stockData.changePercentage * stock.quantity));
+    _totalPortfolioValue = _stocks.fold(0.0, (sum, stock) => sum + (stock.price * stock.quantity));
+    _totalDayChange = _stocks.fold(0.0, (sum, stock) => sum + (stock.change * stock.quantity));
   }
 
   void _listenToPortfolioChanges() {
-    // Listen to real-time portfolio changes
     PortfolioService.listenToPortfolio(widget.userId).listen((stocks) {
       if (mounted) {
         setState(() {
           _stocks = stocks;
+          _calculatePortfolioMetrics();
         });
       }
     });
   }
+    Future<void> _updateStockQuantity(Stock stock, int newQuantity) async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final success = await PortfolioService.updateStockQuantity(
+        widget.userId, 
+        stock.symbol, 
+        newQuantity
+      );
+      
+      if (!success) {
+        _showErrorMessage('Failed to update stock quantity');
+      }
+    } catch (e) {
+      _showErrorMessage('Error updating quantity: $e');
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
   Widget _buildPortfolioSummaryCard() {
-  bool isPositiveChange = _totalDayChange >= 0;
-  double changePercentage = _totalPortfolioValue > 0 ? (_totalDayChange / _totalPortfolioValue) * 100 : 0;
-  
-  return Container(
-    padding: EdgeInsets.all(20),
-    decoration: BoxDecoration(
-      gradient: LinearGradient(
-        colors: [Colors.blue.shade700, Colors.blue.shade900],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
+    bool isPositiveChange = _totalDayChange >= 0;
+    double changePercentage = _totalPortfolioValue > 0 ? (_totalDayChange / _totalPortfolioValue) * 100 : 0;
+    
+    return Container(
+      padding: EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.blue.shade700, Colors.blue.shade900],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.blue.withOpacity(0.3),
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
       ),
-      borderRadius: BorderRadius.circular(16),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.blue.withOpacity(0.3),
-          blurRadius: 10,
-          offset: Offset(0, 4),
-        ),
-      ],
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Portfolio Value',
-          style: TextStyle(
-            color: Colors.white.withOpacity(0.8),
-            fontSize: 16,
-          ),
-        ),
-        SizedBox(height: 8),
-        Text(
-          '\$${_totalPortfolioValue.toStringAsFixed(2)}',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 32,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        SizedBox(height: 8),
-        Row(
-          children: [
-            Icon(
-              isPositiveChange ? Icons.trending_up : Icons.trending_down,
-              color: isPositiveChange ? Colors.greenAccent : Colors.redAccent,
-              size: 20,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Portfolio Value',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.8),
+              fontSize: 16,
             ),
-            SizedBox(width: 4),
-            Text(
-              '${isPositiveChange ? '+' : ''}\$${_totalDayChange.toStringAsFixed(2)} (${changePercentage.toStringAsFixed(2)}%)',
-              style: TextStyle(
+          ),
+          SizedBox(height: 8),
+          Text(
+            '\$${_totalPortfolioValue.toStringAsFixed(2)}',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          SizedBox(height: 8),
+          Row(
+            children: [
+              Icon(
+                isPositiveChange ? Icons.trending_up : Icons.trending_down,
                 color: isPositiveChange ? Colors.greenAccent : Colors.redAccent,
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
+                size: 20,
               ),
-            ),
-          ],
+              SizedBox(width: 4),
+              Text(
+                '${isPositiveChange ? '+' : ''}\$${_totalDayChange.toStringAsFixed(2)} (${changePercentage.toStringAsFixed(2)}%)',
+                style: TextStyle(
+                  color: isPositiveChange ? Colors.greenAccent : Colors.redAccent,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickActionsRow() {
+    return Wrap(
+      alignment: WrapAlignment.spaceEvenly,
+      spacing: 16.0,
+      runSpacing: 16.0,
+      children: [
+        _buildQuickActionButton(
+          icon: Icons.analytics,
+          label: 'Analytics',
+          onPressed: () {
+            // Navigate to analytics page
+            print('Navigate to Analytics');
+          },
+        ),
+        _buildQuickActionButton(
+          icon: Icons.notifications,
+          label: 'Alerts',
+          onPressed: () {
+            // Navigate to alerts page
+            print('Navigate to Alerts');
+          },
+        ),
+        _buildQuickActionButton(
+          icon: Icons.account_balance_wallet,
+          label: 'Wallet',
+          onPressed: () {
+            // Navigate to wallet page
+            print('Navigate to Wallet');
+          },
+        ),
+        _buildQuickActionButton(
+          icon: Icons.history,
+          label: 'History',
+          onPressed: () {
+            // Navigate to transaction history
+            print('Navigate to History');
+          },
         ),
       ],
-    ),
-  );
-}
-
-Widget _buildQuickActionsRow() {
-  return Row(
-    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-    children: [
-      _buildQuickActionButton(
-        icon: Icons.analytics,
-        label: 'Analytics',
-        onPressed: () {
-          // Navigate to analytics page
-          print('Navigate to Analytics');
-        },
-      ),
-      _buildQuickActionButton(
-        icon: Icons.notifications,
-        label: 'Alerts',
-        onPressed: () {
-          // Navigate to alerts page
-          print('Navigate to Alerts');
-        },
-      ),
-      _buildQuickActionButton(
-        icon: Icons.account_balance_wallet,
-        label: 'Wallet',
-        onPressed: () {
-          // Navigate to wallet page
-          print('Navigate to Wallet');
-        },
-      ),
-      _buildQuickActionButton(
-        icon: Icons.history,
-        label: 'History',
-        onPressed: () {
-          // Navigate to transaction history
-          print('Navigate to History');
-        },
-      ),
-    ],
-  );
-}
+    );
+  }
 
   Widget _buildQuickActionButton({
     required IconData icon,
@@ -260,27 +285,47 @@ Widget _buildQuickActionsRow() {
     return ListView(
       padding: EdgeInsets.all(16),
       children: [
-        // Portfolio Summary Card
         _buildPortfolioSummaryCard(),
         SizedBox(height: 16),
         
-        // Quick Actions Row
         _buildQuickActionsRow(),
         SizedBox(height: 16),
 
-        // Stock Cards
-        ..._stocks.map((stock) => Column(
-          children: [
-            buildStockCard(stock, onRemove: () => _removeStock(stock)),
-            SizedBox(height: 12),
-          ],
-        )),
+        if (_stocks.isEmpty)
+          Container(
+            padding: EdgeInsets.all(20),
+            child: Column(
+              children: [
+                Icon(Icons.indeterminate_check_box_outlined, size: 64, color: Colors.grey),
+                SizedBox(height: 16),
+                Text(
+                  'Your portfolio is empty',
+                  style: TextStyle(fontSize: 18, color: Colors.grey),
+                ),
+                Text(
+                  'Add some stocks to get started!',
+                  style: TextStyle(fontSize: 14, color: Colors.grey),
+                ),
+              ],
+            ),
+          )
+        else
+          ..._stocks.map((stock) => Column(
+            children: [
+              StockCard(
+                stock: stock,
+                onRemove: () => _removeStock(stock),
+                onQuantityChanged: (newQuantity) => _updateStockQuantity(stock, newQuantity),
+              ),
+              SizedBox(height: 12),
+            ],
+          )),
 
         // Market Indicators Card
         _buildMarketIndicatorsCard(),
-        SizedBox(height: 12),
+        SizedBox(height: 24),
 
-        SizedBox(height: 12),
+      // ADD STOCK
         Container(child: Align(child: 
           FloatingActionButton.extended(
             backgroundColor: MAINGREY,
@@ -290,21 +335,21 @@ Widget _buildQuickActionsRow() {
                   context,
                   MaterialPageRoute(
                     builder: (context) => AddStockPage(
-                      onStockSelected: (symbol) async {
-                        await addStockToPortfolio(symbol);
+                      onStockSelected: (symbol, quantity) async {
+                        await addStockToPortfolio(symbol, quantity);
                       },
                     ),
                   ),
                 );
               },
             icon: Icon(Icons.add),
-            label: Text('ETF STOCKS'),
+            label: Text('ADD ETF'),
           ),),)
       ],
     );
   }
 
-  Future<void> addStockToPortfolio(String symbol) async {
+  Future<void> addStockToPortfolio(String symbol, int quantity) async {
     setState(() {
       _isLoading = true;
     });
@@ -312,8 +357,7 @@ Widget _buildQuickActionsRow() {
     try {
       final newStock = await fetchSingleStock(
         symbol: symbol,
-        name: 'New Stock',
-        code: 'ETF',
+        quantity: quantity,
       );
 
       if (newStock != null) {
@@ -334,7 +378,7 @@ Widget _buildQuickActionsRow() {
       });
     }
   }
-  Future<void> _removeStock(UserStock stock) async {
+  Future<void> _removeStock(Stock stock) async {
     setState(() {
       _isLoading = true;
     });
@@ -357,9 +401,13 @@ Widget _buildQuickActionsRow() {
     }
   }
 
+
   void _showErrorMessage(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+      ),
     );
   }
 }
