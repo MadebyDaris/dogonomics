@@ -179,7 +179,7 @@ Future<Stock?> fetchSingleStock({
       name: stockData.companyName,
       code: stockData.exchange,
       price: stockData.currentPrice,
-      change: stockData.changePercentage, // This is already a percentage from API
+      change: stockData.currentPrice * stockData.changePercentage / 100, // This is already a percentage from API
       quantity: quantity,
     );
     

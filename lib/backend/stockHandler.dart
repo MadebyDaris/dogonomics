@@ -33,13 +33,15 @@ class _StockCardState extends State<StockCard> {
   }
 
   Future<void> _loadLogo() async {
-    final logoManager = LogoManager();
-    final path = await logoManager.fetchLogoPath(widget.stock.symbol.toLowerCase());
-    print('Logo path: $path');
-    if (path.isNotEmpty) {
-      setState(() {
-        logoPath = path;
-      });
+    try {
+      final profile = await DogonomicsApi().getCompanyProfile(widget.stock.symbol);
+      if (profile != null && profile.logo.isNotEmpty) {
+        setState(() {
+          logoPath = profile.logo;
+        });
+      }
+    } catch (e) {
+      print('Failed to load logo: $e');
     }
   }
 
@@ -120,7 +122,7 @@ class _StockCardState extends State<StockCard> {
             padding: EdgeInsets.all(15),           
             child: Center(
               child: logoPath != null
-                  ? Image.file(File(logoPath!), width: 30, height: 30)
+                  ? Image.network(logoPath!, width: 30, height: 30)
                   : Icon(Icons.image, size: 24, color: Colors.black),
             ),
           ),
@@ -130,12 +132,14 @@ class _StockCardState extends State<StockCard> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-            Text(
-              widget.stock.name,               
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              softWrap: true,                
+            Expanded(
+              child: Text(
+                widget.stock.name,               
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                softWrap: true,                
+              ),
             ),
             SizedBox(width: 8),
             Container(
@@ -162,7 +166,7 @@ class _StockCardState extends State<StockCard> {
                 color: widget.stock.isPositive ? Colors.green : Colors.red,
               ),
               Text(
-                '${widget.stock.isPositive ? '+' : '-'}${widget.stock.change.toStringAsFixed(2)}%',
+                '${widget.stock.isPositive ? '+' : '-'}${widget.stock.changePercentage.toStringAsFixed(2)}%',
                 style: TextStyle(color: widget.stock.isPositive ? Colors.green : Colors.red),
               ),
               SizedBox(height: 8),

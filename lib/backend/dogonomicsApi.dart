@@ -150,6 +150,8 @@ class ChartDataPoint {
 }
 
 class DogonomicsAPI {
+  // NOTE: This IP address is for the Android emulator to connect to the host machine.
+  // For other platforms, you may need to change this to the correct IP address.
   static const String baseUrl = 'http://10.0.2.2:8080';
 
   static Future<StockData> fetchStockData(String symbol) async {
@@ -185,6 +187,24 @@ class DogonomicsAPI {
       }
     } catch (e) {
       throw Exception('Sentiment analysis error: $e');
+    }
+  }
+
+  static Future<CompanyProfile?> getCompanyProfile(String symbol) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/profile/$symbol'),
+        headers: {'Content-Type': 'application/json'},
+      ).timeout(const Duration(seconds: 30));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return CompanyProfile.fromJson(data);
+      } else {
+        return null;
+      }
+    } catch (e) {
+      return null;
     }
   }
 }

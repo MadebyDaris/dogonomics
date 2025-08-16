@@ -1,3 +1,4 @@
+import 'package:fl_chart/fl_chart.dart' show LineChartBarData, FlBorderData, FlTitlesData, FlGridData, LineChartData, LineChart, BarAreaData, FlDotData, FlSpot;
 import 'package:flutter/material.dart';
 
 import '../backend/dogonomicsApi.dart';
@@ -95,7 +96,10 @@ class ChartWidget extends StatelessWidget {
       );
     }
 
-    // Basic line chart using Container and CustomPaint for now
+    final spots = chartData.asMap().entries.map((entry) {
+      return FlSpot(entry.key.toDouble(), entry.value.y);
+    }).toList();
+
     return Container(
       height: 200,
       margin: const EdgeInsets.all(20),
@@ -105,28 +109,26 @@ class ChartWidget extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey[800]!),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Price Chart',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Expanded(
-            child: Center(
-              child: Text(
-                'Chart visualization coming soon\n${chartData.length} data points available',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey[400]),
+      child: LineChart(
+        LineChartData(
+          gridData: FlGridData(show: false),
+          titlesData: FlTitlesData(show: false),
+          borderData: FlBorderData(show: false),
+          lineBarsData: [
+            LineChartBarData(
+              spots: spots,
+              isCurved: true,
+              color: Colors.blue,
+              barWidth: 3,
+              isStrokeCapRound: true,
+              dotData: FlDotData(show: false),
+              belowBarData: BarAreaData(
+                show: true,
+                color: Colors.blue.withOpacity(0.3),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
