@@ -100,11 +100,13 @@ class _StockCardState extends State<StockCard> {
         );
     },
     borderRadius: BorderRadius.circular(12),   
-    child:Container(
+    child:
+    Container(
       padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: MAINGREY,
         borderRadius: BorderRadius.circular(12),
+        
       ),
       child: Row(
         children: [
@@ -112,7 +114,7 @@ class _StockCardState extends State<StockCard> {
             width: 60,
             height: 60,
             decoration: BoxDecoration(
-              color: BACKG_COLOR,
+              color: MAINGREY,
               shape: BoxShape.circle,        
               ),
             padding: EdgeInsets.all(15),           
@@ -122,31 +124,35 @@ class _StockCardState extends State<StockCard> {
                   : Icon(Icons.image, size: 24, color: Colors.black),
             ),
           ),
-          SizedBox(width: 8),
-
-          Container(
-            padding: EdgeInsets.symmetric(vertical: 8, horizontal: 15),
-            decoration: BoxDecoration(
-              color: Colors.amber.shade700,
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Text(
-              widget.stock.symbol,
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black),
-            ),
-          ),
-
-          SizedBox(width: 16),
           
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(widget.stock.name, style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-                Text(widget.stock.code, style: TextStyle(color: MAINGREY_LIGHT)),
-              ],
+          SizedBox(width: 6),
+
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+            Text(
+              widget.stock.name,               
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              softWrap: true,                
             ),
-          ),
+            SizedBox(width: 8),
+            Container(
+              padding: EdgeInsets.symmetric(vertical: 8, horizontal: 15),
+              decoration: BoxDecoration(
+                color: ACCENT_COLOR,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Column(children: [ Text(
+                widget.stock.symbol,
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black),
+              ),
+              ],)
+            ),
+        ]),
+  
+          SizedBox(width: 16),
 
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
@@ -159,19 +165,19 @@ class _StockCardState extends State<StockCard> {
                 '${widget.stock.isPositive ? '+' : '-'}${widget.stock.change.toStringAsFixed(2)}%',
                 style: TextStyle(color: widget.stock.isPositive ? Colors.green : Colors.red),
               ),
-              SizedBox(height: 4),
+              SizedBox(height: 8),
               Text(
                 '\$${widget.stock.price.toStringAsFixed(2)}',
                 style: TextStyle(fontSize: 15),
               ),
               Text(
-                'Total: \${(widget.stock.price * widget.stock.quantity).toStringAsFixed(2)}',
+                'Total: ${(widget.stock.price * widget.stock.quantity).toStringAsFixed(2)}',
                 style: TextStyle(fontSize: 12, color: Colors.grey),
               ),
             ],
           ),
-          Column(children: [
-
+          Column(
+            children: [
                 IconButton(
                   icon: Icon(Icons.edit, color: Colors.blueAccent, size: 20),
                   onPressed: _showQuantityDialog,

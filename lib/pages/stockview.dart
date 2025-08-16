@@ -45,7 +45,13 @@ class _StockViewTabState extends State<StockViewTab> {
 
   void _calculatePortfolioMetrics() {
     _totalPortfolioValue = _stocks.fold(0.0, (sum, stock) => sum + (stock.price * stock.quantity));
-    _totalDayChange = _stocks.fold(0.0, (sum, stock) => sum + (stock.change * stock.quantity));
+
+    _totalDayChange = _stocks.fold(0.0, (sum, stock) {
+      double dollarChange = stock.change;   
+      double previousPrice = stock.price / (1 + (stock.change / 100));
+      dollarChange = (stock.price - previousPrice) * stock.quantity;
+    return sum + dollarChange;
+    });
   }
 
   void _listenToPortfolioChanges() {
@@ -90,14 +96,14 @@ class _StockViewTabState extends State<StockViewTab> {
       padding: EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Colors.blue.shade700, Colors.blue.shade900],
+          colors: [ACCENT_COLOR_BRIGHT, ACCENT_COLOR],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.blue.withOpacity(0.3),
+            color: ACCENT_SHADOW,
             blurRadius: 10,
             offset: Offset(0, 4),
           ),
@@ -232,14 +238,14 @@ class _StockViewTabState extends State<StockViewTab> {
         decoration: BoxDecoration(
           color: MAINGREY,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.amber.shade700, width: 2),
+          border: Border.all(color: ACCENT_COLOR, width: 2),
         ),
         child: Row(
           children: [
             Container(
               padding: EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.amber.shade700,
+                color: ACCENT_COLOR,
                 shape: BoxShape.circle,
               ),
               child: Icon(

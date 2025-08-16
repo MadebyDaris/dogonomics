@@ -8,12 +8,65 @@ class CompanyHeader extends StatelessWidget {
 
   const CompanyHeader({Key? key, required this.stockData}) : super(key: key);
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      
-    );
-  }
+@override
+Widget build(BuildContext context) {
+  bool isPositive = stockData.changePercentage >= 0;
+  
+  return Container(
+    padding: const EdgeInsets.all(20),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          stockData.companyName,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Text(
+              '\$${stockData.currentPrice.toStringAsFixed(2)}',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: isPositive ? Colors.green.withOpacity(0.2) : Colors.red.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    isPositive ? Icons.trending_up : Icons.trending_down,
+                    color: isPositive ? Colors.green : Colors.red,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${isPositive ? '+' : ''}${stockData.changePercentage.toStringAsFixed(2)}%',
+                    style: TextStyle(
+                      color: isPositive ? Colors.green : Colors.red,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ],
+    ),
+  );
+}
 }
 
 // Charts
@@ -24,7 +77,58 @@ class ChartWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container();
+    if (chartData.isEmpty) {
+      return Container(
+        height: 200,
+        margin: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1A2332),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[800]!),
+        ),
+        child: const Center(
+          child: Text(
+            'Chart data not available',
+            style: TextStyle(color: Colors.grey),
+          ),
+        ),
+      );
+    }
+
+    // Basic line chart using Container and CustomPaint for now
+    return Container(
+      height: 200,
+      margin: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A2332),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[800]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Price Chart',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: Center(
+              child: Text(
+                'Chart visualization coming soon\n${chartData.length} data points available',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey[400]),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -72,9 +176,9 @@ class MetricCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A2332),
+        color: const Color.fromARGB(255, 14, 19, 28),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey[800]!),
       ),
@@ -93,7 +197,7 @@ class MetricCard extends StatelessWidget {
             value,
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 16,
+              fontSize: 14,
               fontWeight: FontWeight.w600,
             ),
           ),

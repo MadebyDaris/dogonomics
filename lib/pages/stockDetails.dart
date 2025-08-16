@@ -1,4 +1,5 @@
 // Rewriting whole StockDetails the old one was a template generated to test
+import 'package:dogonomics_frontend/utils/constant.dart';
 import 'package:dogonomics_frontend/widgets/stockDetailsWidgets.dart';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -88,7 +89,7 @@ class _StockDetailsPageState extends State<StockDetailsPage> with SingleTickerPr
   @override
   Widget build(BuildContext context) {
 return Scaffold(
-      backgroundColor: const Color(0xFF0D1421),
+      backgroundColor: BACKG_COLOR,
       appBar: _buildAppBar(),
       body: Column(
         children: [
@@ -120,7 +121,7 @@ return Scaffold(
   }
     PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      backgroundColor: const Color(0xFF0D1421),
+      backgroundColor: BACKG_COLOR,
       elevation: 0,
       leading: IconButton(
         icon: const Icon(Icons.arrow_back, color: Colors.white),
