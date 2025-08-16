@@ -12,10 +12,15 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// INIITIATE THE CLIENTS
 var (
-	finnhubClient = DogonomicsFetching.NewClient()
+	finnhubClient *DogonomicsFetching.Client
+	dogonomicsFetchingClient *DogonomicsFetching.Client
 )
+
+func Init(fc *DogonomicsFetching.Client) {
+	finnhubClient = fc
+	dogonomicsFetchingClient = fc
+}
 
 func GetTicker(c *gin.Context) {
 	symbol := c.Param("symbol")
@@ -106,7 +111,7 @@ func GetNewsSentimentBERT(c *gin.Context) {
 
 func GetStockDetail(c *gin.Context) {
 	symbol := c.Param("symbol")
-	StockDetail, err := DogonomicsFetching.NewClient().BuildStockDetailData(symbol)
+	StockDetail, err := dogonomicsFetchingClient.BuildStockDetailData(symbol)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"BuildStockDetailData error": err.Error()})
 	}
@@ -115,7 +120,7 @@ func GetStockDetail(c *gin.Context) {
 
 func GetCompanyProfile(c *gin.Context) {
 	symbol := c.Param("symbol")
-	StockDetail, err := DogonomicsFetching.NewClient().GetCompanyProfile(symbol)
+	StockDetail, err := dogonomicsFetchingClient.GetCompanyProfile(symbol)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"GetCompanyProfile error": err.Error()})
 	}
