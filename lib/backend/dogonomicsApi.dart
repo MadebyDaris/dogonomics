@@ -2,6 +2,36 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+class CompanyProfile {
+  final String symbol;
+  final String name;
+  final String logo;
+  final String description;
+  final String exchange;
+  final String website;
+
+  CompanyProfile({
+    required this.symbol,
+    required this.name,
+    required this.logo,
+    required this.description,
+    required this.exchange,
+    required this.website,
+  });
+
+  factory CompanyProfile.fromJson(Map<String, dynamic> json) {
+    return CompanyProfile(
+      symbol: json['symbol'] ?? '',
+      name: json['name'] ?? '',
+      logo: json['logo'] ?? '',
+      description: json['description'] ?? '',
+      exchange: json['exchange'] ?? '',
+      website: json['website'] ?? '',
+    );
+  }
+}
+
+
 class StockData {
   final String companyName;
   final double currentPrice;
@@ -201,9 +231,11 @@ class DogonomicsAPI {
         final data = json.decode(response.body);
         return CompanyProfile.fromJson(data);
       } else {
+        print('Failed to load company profile for $symbol: ${response.statusCode}');
         return null;
       }
     } catch (e) {
+      print('Error loading company profile for $symbol: $e');
       return null;
     }
   }

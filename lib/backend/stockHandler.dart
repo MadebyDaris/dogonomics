@@ -24,8 +24,9 @@ class StockCard extends StatefulWidget {
 }
 
 class _StockCardState extends State<StockCard> {
-  String? logoPath;
-
+  String? logoUrl;
+  bool isLoadingLogo = true;
+  
   @override
   void initState() {
     super.initState();
@@ -34,16 +35,27 @@ class _StockCardState extends State<StockCard> {
 
   Future<void> _loadLogo() async {
     try {
-      final profile = await DogonomicsApi().getCompanyProfile(widget.stock.symbol);
-      if (profile != null && profile.logo.isNotEmpty) {
+      final profile = await DogonomicsAPI.getCompanyProfile(widget.stock.symbol);
+      if (mounted && profile != null && profile.logo.isNotEmpty) {
         setState(() {
-          logoPath = profile.logo;
+          logoUrl = profile.logo;
+          isLoadingLogo = false;
+        });
+      } else {
+        setState(() {
+          isLoadingLogo = false;
         });
       }
     } catch (e) {
-      print('Failed to load logo: $e');
+      print('Failed to load logo for ${widget.stock.symbol}: $e');
+      if (mounted) {
+        setState(() {
+          isLoadingLogo = false;
+        });
+      }
     }
   }
+
 
   void _showQuantityDialog() {
     final TextEditingController controller = TextEditingController(
@@ -121,40 +133,46 @@ class _StockCardState extends State<StockCard> {
               ),
             padding: EdgeInsets.all(15),           
             child: Center(
-              child: logoPath != null
-                  ? Image.network(logoPath!, width: 30, height: 30)
-                  : Icon(Icons.image, size: 24, color: Colors.black),
+              child: _buildLogo(),
             ),
           ),
           
-          SizedBox(width: 6),
-
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-            Expanded(
-              child: Text(
-                widget.stock.name,               
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                softWrap: true,                
+          SizedBox(width: 12),
+          Expanded(
+          child:
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+              Expanded(
+                child: Text(
+                  widget.stock.name,               
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-            ),
-            SizedBox(width: 8),
-            Container(
-              padding: EdgeInsets.symmetric(vertical: 8, horizontal: 15),
-              decoration: BoxDecoration(
-                color: ACCENT_COLOR,
-                borderRadius: BorderRadius.circular(6),
+              
+              SizedBox(width: 8),
+              
+              // SYMBOL
+              Container(
+                padding: EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+                decoration: BoxDecoration(
+                  color: ACCENT_COLOR,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: 
+                Column(
+                  children: [
+                    Text(
+                      widget.stock.symbol,
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black),
+                    ),
+                  ],
+                )
               ),
-              child: Column(children: [ Text(
-                widget.stock.symbol,
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black),
-              ),
-              ],)
-            ),
-        ]),
+            ]),
+          ),
   
           SizedBox(width: 16),
 
@@ -196,6 +214,65 @@ class _StockCardState extends State<StockCard> {
         ],
       ),
     )
+    );
+  }
+    Widget _buildLogo() {
+    if (isLoadingLogo) {
+      return SizedBox(
+        width: 24,
+        height: 24,
+        child: CircularProgressIndicator(
+          strokeWidth: 2,
+          valueColor: AlwaysStoppedAnimation<Color>(ACCENT_COLOR),
+        ),
+      );
+    }
+
+    if (logoUrl != null && logoUrl!.isNotEmpty) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(4),
+        child: Image.network(
+          logoUrl!,
+          width: 36,
+          height: 36,
+          fit: BoxFit.contain,
+          errorBuilder: (context, error, stackTrace) {
+            return _buildFallbackIcon();
+          },
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(ACCENT_COLOR),
+                value: loadingProgress.expectedTotalBytes != null
+                    ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                    : null,
+              ),
+            );
+          },
+        ),
+      );
+    }
+
+    return _buildFallbackIcon();
+  }
+
+  Widget _buildFallbackIcon() {
+    return Container(
+      width: 36,
+      height: 36,
+      decoration: BoxDecoration(
+        color: ACCENT_COLOR.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Icon(
+        Icons.trending_up,
+        size: 20,
+        color: ACCENT_COLOR,
+      ),
     );
   }
 }
