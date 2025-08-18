@@ -30,6 +30,7 @@ type StockDetailData struct {
 	SentimentData       []ChartDataPoint        `json:"sentimentData"`
 	News                []sentAnalysis.NewsItem `json:"news"`
 	AnalyticsData       []ChartDataPoint        `json:"analyticsData"`
+	Logo                string                  `json:"logo"`
 }
 
 // Common structures

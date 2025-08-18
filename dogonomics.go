@@ -19,7 +19,6 @@ func main() {
 	if err != nil {
 		fmt.Println("Error loading .env file")
 	}
-	fmt.Println("API KEY:", os.Getenv("FINNHUB_API_KEY"))
 	if os.Getenv("FINNHUB_API_KEY") == "" {
 		fmt.Println("FINNHUB_API_KEY is not set in .env file")
 		fmt.Println("Please set your FINNHUB_API_KEY in the .env file.")
