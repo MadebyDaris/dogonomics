@@ -49,10 +49,9 @@ func FetchData(symbol string) ([]NewsItem, error) {
 	params := url.Values{}
 	params.Set("api_token", apiKey)
 	params.Set("s", symbol)
-	params.Set("limit", "2")
+	params.Set("limit", "4")
 	fullURL := fmt.Sprintf("%s?%s", endpoint, params.Encode())
 	resp, respErr := http.Get(fullURL)
-	print(fullURL)
 	if respErr != nil {
 		return nil, respErr
 	}

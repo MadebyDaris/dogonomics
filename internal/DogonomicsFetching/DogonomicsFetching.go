@@ -171,9 +171,10 @@ func (c *Client) BuildStockDetailData(symbol string) (*DogonomicsProcessing.Stoc
 		EPS:                 eps,
 		AboutDescription:    fmt.Sprintf("%s is listed on %s", profile.Name, profile.Exchange),
 		ChartData:           chart,                                       // Fetch last 30 days of data
-		TechnicalIndicators: []DogonomicsProcessing.TechnicalIndicator{}, // Not available on free plan
-		SentimentData:       []DogonomicsProcessing.ChartDataPoint{},     // Not available on free plan
+		TechnicalIndicators: []DogonomicsProcessing.TechnicalIndicator{},
+		SentimentData:       []DogonomicsProcessing.ChartDataPoint{},
 		News:                []sentAnalysis.NewsItem{},
-		AnalyticsData:       []DogonomicsProcessing.ChartDataPoint{}, // Custom analytics would go here
+		AnalyticsData:       []DogonomicsProcessing.ChartDataPoint{},
+		Logo:                profile.Logo,
 	}, nil
 }
