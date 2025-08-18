@@ -3,26 +3,6 @@ import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'token.dart';
 
-// Future<String> getToken() async {
-
-//     final directory = await getApplicationDocumentsDirectory();
-
-//     var _localPath =  directory.path;
-    
-//     final path = await _localPath;
-//     File _localFile = File('$path/logodevtoken.txt');
-
-//   try {
-//     // Read the file
-//     final contents = await _localFile.readAsString();
-//     print('Token read from file: $contents');
-//     return contents.trim();
-//   } catch (e) {
-//     // If encountering an error, return 0
-//     return "";
-//   }
-// }
-
 class LogoManager {
   static final Dio _dio = Dio();
   static const String _baseUrl = 'https://img.logo.dev/ticker';

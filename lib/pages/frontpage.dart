@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:dogonomics_frontend/backend/stockHandler.dart';
 import 'package:dogonomics_frontend/backend/user.dart';
 import 'package:dogonomics_frontend/pages/stockview.dart';
@@ -31,16 +33,24 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: PreferredSize(
-      preferredSize: Size.fromHeight(160.0), // here the desired height
+      preferredSize: Size.fromHeight(140.0), // here the desired height
       child: AppBar(
         backgroundColor: MAINGREY,
         title: Container(
-            padding: EdgeInsets.only(top:30, bottom: 0),
-            margin: EdgeInsets.only(left: 20, right: 20),
-            child: 
-              Text('Dogonomics Assistant', 
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, fontFamily: GoogleFonts.josefinSans().fontFamily))
-          ),
+            padding: EdgeInsets.only(top:6, bottom: 0),
+            margin: EdgeInsets.only(left: 20, right: 20, top: 20, bottom: 20),
+            child:
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+              Image(
+                image: AssetImage("assets/images/dogonomicsLogo.png"),
+                width: 100,
+                height: 100,
+              ),
+              Text('DOGONOMICS \n ASSISTANT', 
+                style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold, fontFamily: 'Liberation Sans'))
+        ])),
         actions: [
           IconButton(
             icon: Icon(Icons.search),
@@ -71,7 +81,7 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: tabs.length, vsync: this, initialIndex: 1);
+    _tabController = TabController(length: tabs.length, vsync: this, initialIndex: 0);
   }
 Future<void> _loadUserStocks() async {
   if (widget.user == null) return;

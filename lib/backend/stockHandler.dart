@@ -36,12 +36,12 @@ class _StockCardState extends State<StockCard> {
   Future<void> _loadLogo() async {
     try {
       final profile = await DogonomicsAPI.getCompanyProfile(widget.stock.symbol);
-      if (mounted && profile != null && profile.logo.isNotEmpty) {
-        setState(() {
-          logoUrl = profile.logo;
-          isLoadingLogo = false;
+        if (mounted && profile?.logo.isNotEmpty == true) {
+          setState(() {
+            logoUrl = profile!.logo;
+            isLoadingLogo = false;
         });
-      } else {
+        } else {
         setState(() {
           isLoadingLogo = false;
         });
@@ -143,14 +143,15 @@ class _StockCardState extends State<StockCard> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-              Expanded(
-                child: Text(
+              // Flexible(
+                // child: 
+                Text(
                   widget.stock.name,               
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
-              ),
+              // ),
               
               SizedBox(width: 8),
               
@@ -187,13 +188,13 @@ class _StockCardState extends State<StockCard> {
                 '${widget.stock.isPositive ? '+' : '-'}${widget.stock.changePercentage.toStringAsFixed(2)}%',
                 style: TextStyle(color: widget.stock.isPositive ? Colors.green : Colors.red),
               ),
-              SizedBox(height: 8),
+              SizedBox(height: 6),
               Text(
                 '\$${widget.stock.price.toStringAsFixed(2)}',
-                style: TextStyle(fontSize: 15),
+                style: TextStyle(fontSize: 14),
               ),
               Text(
-                'Total: ${(widget.stock.price * widget.stock.quantity).toStringAsFixed(2)}',
+                'Total: ${widget.stock.quantity.toStringAsFixed(2)} : \$${(widget.stock.price * widget.stock.quantity).toStringAsFixed(2)}',
                 style: TextStyle(fontSize: 12, color: Colors.grey),
               ),
             ],

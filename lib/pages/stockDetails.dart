@@ -88,7 +88,7 @@ class _StockDetailsPageState extends State<StockDetailsPage> with SingleTickerPr
 
   @override
   Widget build(BuildContext context) {
-return Scaffold(
+    return Scaffold(
       backgroundColor: BACKG_COLOR,
       appBar: _buildAppBar(),
       body: Column(
