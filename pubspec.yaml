@@ -1,5 +1,5 @@
-name: dogonomics_frontend
-description: "A new Flutter project."
+name: Dogonomics
+description: "Financial Assistant for Dogs."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -61,6 +61,7 @@ flutter:
 
   assets:
     - assets/images/dogonomicsLogo.png
+    - assets/images/Darispfp.jpg
 
   fonts:
       - family: Liberation Sans

@@ -1,5 +1,5 @@
-import 'package:dogonomics_frontend/backend/authentication.dart';
-import 'package:dogonomics_frontend/utils/constant.dart';
+import 'package:Dogonomics/backend/authentication.dart';
+import 'package:Dogonomics/utils/constant.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'package:flutter/material.dart';

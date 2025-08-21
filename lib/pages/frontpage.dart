@@ -1,16 +1,16 @@
 import 'dart:io';
 
-import 'package:dogonomics_frontend/backend/stockHandler.dart';
-import 'package:dogonomics_frontend/backend/user.dart';
-import 'package:dogonomics_frontend/pages/stockview.dart';
-import 'package:dogonomics_frontend/utils/constant.dart';
-import 'package:dogonomics_frontend/utils/tickerData.dart';
+import 'package:Dogonomics/backend/stockHandler.dart';
+import 'package:Dogonomics/backend/user.dart';
+import 'package:Dogonomics/pages/stockview.dart';
+import 'package:Dogonomics/utils/constant.dart';
+import 'package:Dogonomics/utils/tickerData.dart';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import "package:dogonomics_frontend/pages/stockview.dart";
+import "package:Dogonomics/pages/stockview.dart";
 
 class MyHomePage extends StatefulWidget {
   MyHomePage({super.key, required this.title, this.user});
@@ -37,19 +37,19 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
       child: AppBar(
         backgroundColor: MAINGREY,
         title: Container(
-            padding: EdgeInsets.only(top:6, bottom: 0),
-            margin: EdgeInsets.only(left: 20, right: 20, top: 20, bottom: 20),
+            padding: EdgeInsets.only(top: 3, bottom: 0),
+            margin: EdgeInsets.only(left: 15, right: 20, top: 20, bottom: 20),
             child:
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
               Image(
                 image: AssetImage("assets/images/dogonomicsLogo.png"),
-                width: 100,
-                height: 100,
+                width: 90,
+                height: 90,
               ),
               Text('DOGONOMICS \n ASSISTANT', 
-                style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold, fontFamily: 'Liberation Sans'))
+                style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold, fontFamily: 'Liberation Sans'))
         ])),
         actions: [
           IconButton(

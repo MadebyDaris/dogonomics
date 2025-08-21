@@ -1,12 +1,12 @@
 import 'dart:io';
 
-import 'package:dogonomics_frontend/backend/authentication.dart';
-import 'package:dogonomics_frontend/backend/stockHandler.dart';
-import 'package:dogonomics_frontend/pages/marketIndicPage.dart';
-import 'package:dogonomics_frontend/utils/constant.dart';
-import 'package:dogonomics_frontend/utils/logoManager.dart';
-import 'package:dogonomics_frontend/utils/stockDialog.dart';
-import 'package:dogonomics_frontend/utils/tickerData.dart';
+import 'package:Dogonomics/backend/authentication.dart';
+import 'package:Dogonomics/backend/stockHandler.dart';
+import 'package:Dogonomics/pages/marketIndicPage.dart';
+import 'package:Dogonomics/utils/constant.dart';
+import 'package:Dogonomics/utils/logoManager.dart';
+import 'package:Dogonomics/utils/stockDialog.dart';
+import 'package:Dogonomics/utils/tickerData.dart';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -115,7 +115,7 @@ class _StockViewTabState extends State<StockViewTab> {
           Text(
             'Portfolio Value',
             style: TextStyle(
-              color: Colors.white.withOpacity(0.8),
+              color: MAINGREY,
               fontSize: 16,
             ),
           ),
@@ -123,7 +123,7 @@ class _StockViewTabState extends State<StockViewTab> {
           Text(
             '\$${_totalPortfolioValue.toStringAsFixed(2)}',
             style: TextStyle(
-              color: Colors.white,
+              color: MAINGREY,
               fontSize: 32,
               fontWeight: FontWeight.bold,
             ),
@@ -133,14 +133,14 @@ class _StockViewTabState extends State<StockViewTab> {
             children: [
               Icon(
                 isPositiveChange ? Icons.trending_up : Icons.trending_down,
-                color: isPositiveChange ? Colors.greenAccent : Colors.redAccent,
+                color: isPositiveChange ? const Color.fromARGB(255, 32, 83, 33) : Colors.redAccent,
                 size: 20,
               ),
               SizedBox(width: 4),
               Text(
                 '${isPositiveChange ? '+' : ''}\$${_totalDayChange.toStringAsFixed(2)} (${changePercentage.toStringAsFixed(2)}%)',
                 style: TextStyle(
-                  color: isPositiveChange ? Colors.greenAccent : Colors.redAccent,
+                  color: isPositiveChange ? const Color.fromARGB(255, 32, 83, 33) : Colors.redAccent,
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                 ),
@@ -210,7 +210,7 @@ class _StockViewTabState extends State<StockViewTab> {
         ),
         child: Column(
           children: [
-            Icon(icon, size: 24, color: Colors.blue),
+            Icon(icon, size: 24, color: ACCENT_COLOR),
             SizedBox(height: 4),
             Text(
               label,

@@ -1,9 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:dogonomics_frontend/backend/stockHandler.dart';
-import 'package:dogonomics_frontend/backend/user.dart';
-import 'package:dogonomics_frontend/pages/frontpage.dart';
-import 'package:dogonomics_frontend/pages/stockview.dart';
-import 'package:dogonomics_frontend/utils/tickerData.dart';
+import 'package:Dogonomics/backend/stockHandler.dart';
+import 'package:Dogonomics/backend/user.dart';
+import 'package:Dogonomics/pages/frontpage.dart';
+import 'package:Dogonomics/pages/landingpage.dart';
+import 'package:Dogonomics/pages/stockview.dart';
+import 'package:Dogonomics/utils/tickerData.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -54,7 +55,10 @@ class _LoginScreenState extends State<LoginScreen> {
           'email': user.email,
           'portfolio': portfolio,
         });
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => MyHomePage(title: "Dogonomics", user: myuser,)));
+        Navigator.pushReplacement(context, 
+          MaterialPageRoute(builder: (_) => 
+            DogonomicsLandingPage(onContinueToPortfolio: null, userId: user.uid,
+          )));        
         }
       }
     } catch (e) {
@@ -98,7 +102,16 @@ class _LoginScreenState extends State<LoginScreen> {
           'email': user.email,
           'portfolio': [],
         });
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => MyHomePage(title: "Dogonomics", user: myuser,)));
+      Navigator.pushReplacement(context, 
+        MaterialPageRoute(builder: (_) => DogonomicsLandingPage(onContinueToPortfolio: () {
+          Navigator.pushReplacement(
+            context, 
+            MaterialPageRoute( 
+              builder: (_) => MyHomePage(title: "DOGONOMICS", user: myuser)
+            )
+          );
+        }
+        )));
       }
     } catch (e) {
       print('Signup failed: $e');

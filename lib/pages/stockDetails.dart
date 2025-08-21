@@ -1,6 +1,6 @@
 // Rewriting whole StockDetails the old one was a template generated to test
-import 'package:dogonomics_frontend/utils/constant.dart';
-import 'package:dogonomics_frontend/widgets/stockDetailsWidgets.dart';
+import 'package:Dogonomics/utils/constant.dart';
+import 'package:Dogonomics/widgets/stockDetailsWidgets.dart';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:http/http.dart' as http;

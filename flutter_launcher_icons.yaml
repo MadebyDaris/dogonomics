@@ -1,10 +1,10 @@
 # flutter pub run flutter_launcher_icons
 flutter_launcher_icons:
-  image_path: "assets/images/dogonomicsLogo.png"
+  image_path: "assets/images/DogonomicsLogo2.png"
 
   android: 
     generate: true
-    image_path_android: "assets/images/dogonomicsLogo.png"
+    image_path_android: "assets/images/DogonomicsLogo2.png"
     adaptive_icon_background: "#00000"
     adaptive_icon_size: 48
 

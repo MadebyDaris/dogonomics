@@ -1,7 +1,7 @@
-import 'package:dogonomics_frontend/backend/dogonomicsApi.dart';
+import 'package:Dogonomics/backend/dogonomicsApi.dart';
 import 'package:flutter/material.dart';
-import 'package:dogonomics_frontend/utils/constant.dart';
-import 'package:dogonomics_frontend/utils/logoManager.dart';
+import 'package:Dogonomics/utils/constant.dart';
+import 'package:Dogonomics/utils/logoManager.dart';
 import 'dart:io';
 
 import '../pages/stockDetails.dart';
@@ -120,7 +120,7 @@ class _StockCardState extends State<StockCard> {
       decoration: BoxDecoration(
         color: MAINGREY,
         borderRadius: BorderRadius.circular(12),
-        
+        border: Border.all(color: ACCENT_COLOR, width: 2),
       ),
       child: Row(
         children: [
@@ -167,7 +167,7 @@ class _StockCardState extends State<StockCard> {
                   children: [
                     Text(
                       widget.stock.symbol,
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black),
+                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.black),
                     ),
                   ],
                 )
@@ -194,7 +194,7 @@ class _StockCardState extends State<StockCard> {
                 style: TextStyle(fontSize: 14),
               ),
               Text(
-                'Total: ${widget.stock.quantity.toStringAsFixed(2)} : \$${(widget.stock.price * widget.stock.quantity).toStringAsFixed(2)}',
+                '${widget.stock.quantity.toStringAsFixed(2)} : \$${(widget.stock.price * widget.stock.quantity).toStringAsFixed(2)}',
                 style: TextStyle(fontSize: 12, color: Colors.grey),
               ),
             ],

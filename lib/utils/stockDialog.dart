@@ -162,7 +162,7 @@ class _AddStockPageState extends State<AddStockPage> {
                 children: [
                   Icon(Icons.info, color: Colors.blue.shade700),
                   SizedBox(width: 8),
-                  Text('Tap a stock symbol to add it to your portfolio.',)
+                  Text('Tap a stock symbol',)
                 ]
               )
             ),

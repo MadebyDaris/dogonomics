@@ -182,7 +182,7 @@ class ChartDataPoint {
 class DogonomicsAPI {
   // NOTE: This IP address is for the Android emulator to connect to the host machine.
   // For other platforms, you may need to change this to the correct IP address.
-  static const String baseUrl = 'http://10.0.2.2:8080';
+  static const String baseUrl = 'http://192.168.1.148:8080';
 
   static Future<StockData> fetchStockData(String symbol) async {
     try {

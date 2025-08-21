@@ -1,6 +1,6 @@
-import 'package:dogonomics_frontend/backend/dogonomicsApi.dart';
-import 'package:dogonomics_frontend/backend/stockHandler.dart';
-import 'package:dogonomics_frontend/pages/stockview.dart';
+import 'package:Dogonomics/backend/dogonomicsApi.dart';
+import 'package:Dogonomics/backend/stockHandler.dart';
+import 'package:Dogonomics/pages/stockview.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
@@ -93,7 +93,7 @@ class LiveQuote {
 }
 
 Future<LiveQuote?> fetchLiveQuote(String symbol) async {
-  final url = Uri.parse('http://10.0.2.2:8080/quote/$symbol');
+  final url = Uri.parse('http://192.168.1.148:8080/quote/$symbol');
   try {
     final response = await http.get(url);
 
