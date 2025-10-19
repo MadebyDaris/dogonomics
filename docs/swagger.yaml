@@ -1,0 +1,308 @@
+basePath: /
+definitions:
+  BertInference.BERTSentiment:
+    properties:
+      confidence:
+        type: number
+      label:
+        type: string
+      score:
+        type: number
+    type: object
+  controller.ErrorResponse:
+    properties:
+      error:
+        type: string
+    type: object
+  controller.NewsSentimentBERTResponse:
+    properties:
+      aggregate_result:
+        $ref: '#/definitions/sentAnalysis.StockSentimentAnalysis'
+      news_items:
+        items:
+          $ref: '#/definitions/sentAnalysis.NewsItem'
+        type: array
+      symbol:
+        type: string
+    type: object
+  controller.SentimentOnlyResponse:
+    properties:
+      sentiment:
+        $ref: '#/definitions/sentAnalysis.StockSentimentAnalysis'
+      symbol:
+        type: string
+    type: object
+  sentAnalysis.NewsItem:
+    properties:
+      bert_sentiment:
+        allOf:
+        - $ref: '#/definitions/BertInference.BERTSentiment'
+        description: <-- FinBERT sentiment*
+      content:
+        type: string
+      date:
+        type: string
+      link:
+        type: string
+      sentiment:
+        $ref: '#/definitions/sentAnalysis.Sentiment'
+      symbols:
+        items:
+          type: string
+        type: array
+      tags:
+        items:
+          type: string
+        type: array
+      title:
+        type: string
+    type: object
+  sentAnalysis.Sentiment:
+    properties:
+      neg:
+        type: number
+      neu:
+        type: number
+      polarity:
+        type: number
+      pos:
+        type: number
+    type: object
+  sentAnalysis.StockSentimentAnalysis:
+    properties:
+      confidence:
+        type: number
+      negative_ratio:
+        type: number
+      neutral_ratio:
+        type: number
+      news_count:
+        type: integer
+      overall_sentiment:
+        description: -1.0 to 1.0
+        type: number
+      positive_ratio:
+        type: number
+      recommendation:
+        type: string
+      symbol:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: Dogonomics API for stock data, news, and sentiment. Swagger UI is available
+    at /swagger/index.html
+  title: Dogonomics API
+  version: "1.0"
+paths:
+  /chart/{symbol}:
+    get:
+      description: Returns historical price data for a symbol
+      parameters:
+      - description: Ticker symbol (e.g., AAPL)
+        in: path
+        name: symbol
+        required: true
+        type: string
+      - description: Days of history (max 365)
+        in: query
+        name: days
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema: {}
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/controller.ErrorResponse'
+      summary: Get chart data
+      tags:
+      - charts
+  /finnews/{symbol}:
+    get:
+      description: Returns recent news for a symbol (from EODHD)
+      parameters:
+      - description: Ticker symbol (e.g., AAPL)
+        in: path
+        name: symbol
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/sentAnalysis.NewsItem'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/controller.ErrorResponse'
+      summary: Get latest news
+      tags:
+      - news
+  /finnewsBert/{symbol}:
+    get:
+      description: Fetches news for a symbol and returns items with BERT sentiment
+        and aggregate
+      parameters:
+      - description: Ticker symbol (e.g., AAPL)
+        in: path
+        name: symbol
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controller.NewsSentimentBERTResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/controller.ErrorResponse'
+      summary: Get news with BERT sentiment
+      tags:
+      - sentiment
+  /health:
+    get:
+      description: Returns API health information and data sources
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema: {}
+      summary: Health status
+      tags:
+      - health
+  /profile/{symbol}:
+    get:
+      description: Returns company profile for a symbol
+      parameters:
+      - description: Ticker symbol (e.g., AAPL)
+        in: path
+        name: symbol
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema: {}
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/controller.ErrorResponse'
+      summary: Get company profile
+      tags:
+      - stocks
+  /quote/{symbol}:
+    get:
+      description: Returns current quote for a ticker symbol (Finnhub)
+      parameters:
+      - description: Ticker symbol (e.g., AAPL)
+        in: path
+        name: symbol
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema: {}
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/controller.ErrorResponse'
+      summary: Get current quote
+      tags:
+      - quotes
+  /sentiment/{symbol}:
+    get:
+      description: Fetches recent news and returns only the aggregate sentiment values
+      parameters:
+      - description: Ticker symbol (e.g., AAPL)
+        in: path
+        name: symbol
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controller.SentimentOnlyResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/controller.ErrorResponse'
+      summary: Get aggregate sentiment only
+      tags:
+      - sentiment
+  /stock/{symbol}:
+    get:
+      description: Returns comprehensive stock detail for a symbol
+      parameters:
+      - description: Ticker symbol (e.g., AAPL)
+        in: path
+        name: symbol
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema: {}
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/controller.ErrorResponse'
+      summary: Get stock detail
+      tags:
+      - stocks
+  /ticker/{symbol}:
+    get:
+      description: Returns aggregated ticker data for the given date (defaults to
+        yesterday)
+      parameters:
+      - description: Ticker symbol (e.g., AAPL)
+        in: path
+        name: symbol
+        required: true
+        type: string
+      - description: Date (YYYY-MM-DD)
+        in: query
+        name: date
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema: {}
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/controller.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/controller.ErrorResponse'
+      summary: Get aggregated ticker data
+      tags:
+      - ticker
+schemes:
+- http
+swagger: "2.0"
