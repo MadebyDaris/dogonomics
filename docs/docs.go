@@ -476,8 +476,6 @@ var SwaggerInfo = &swag.Spec{
 	Description:      "Dogonomics API for stock data, news, and sentiment. Swagger UI is available at /swagger/index.html",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
-	LeftDelim:        "{{",
-	RightDelim:       "}}",
 }
 
 func init() {

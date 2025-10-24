@@ -1,0 +1,43 @@
+version: '3.8'
+services:
+  dogonomics:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - FINNHUB_API_KEY=${FINNHUB_API_KEY}
+      - EODHD_API_KEY=${EODHD_API_KEY}
+    volumes:
+      - ./sentAnalysis/DoggoFinBERT.onnx:/sentAnalysis/DoggoFinBERT.onnx:ro
+    restart: unless-stopped
+  
+  # ONNX-enabled variant with BERT sentiment analysis
+  dogonomics-onnx:
+    build:
+      context: .
+      dockerfile: Dockerfile.onnx
+    ports:
+      - "8081:8080"
+    environment:
+      - FINNHUB_API_KEY=${FINNHUB_API_KEY}
+      - EODHD_API_KEY=${EODHD_API_KEY}
+    restart: unless-stopped
+    profiles:
+      - onnx
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:9.0.0
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    restart: unless-stopped

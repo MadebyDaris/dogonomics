@@ -3,4 +3,5 @@ sentAnalysis/finbert
 sentAnalysis/sentAnalysis
 sentAnalysis/DoggoFinBERT.onnx
 /go.sum
+/vendor
 .vscode

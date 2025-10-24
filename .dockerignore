@@ -1,0 +1,24 @@
+# Binaries
+/dogonomics
+
+# Vendor
+/vendor
+
+# IDE files
+.vscode
+.idea
+
+# Python virtual env
+sentAnalysis/sentAnalysis/*
+
+# Go build artifacts
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Node modules
+node_modules
+
+# Local env
+.env

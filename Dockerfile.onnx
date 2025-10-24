@@ -1,0 +1,79 @@
+# Dockerfile.onnx - ONNX-enabled build with CGO
+# syntax=docker/dockerfile:1.6
+
+ARG TARGETOS=linux
+ARG TARGETARCH=amd64
+
+# Build stage with ONNX Runtime
+FROM --platform=$BUILDPLATFORM golang:1.24.5-alpine AS builder
+WORKDIR /app
+
+# Install build dependencies for CGO + ONNX
+RUN apk add --no-cache \
+    git \
+    ca-certificates \
+    gcc \
+    g++ \
+    musl-dev \
+    wget \
+    unzip
+
+# Download and install ONNX Runtime for Linux
+# Using version 1.17.1 to match the Go binding
+ARG ONNX_VERSION=1.17.1
+RUN wget -q https://github.com/microsoft/onnxruntime/releases/download/v${ONNX_VERSION}/onnxruntime-linux-x64-${ONNX_VERSION}.tgz && \
+    tar -xzf onnxruntime-linux-x64-${ONNX_VERSION}.tgz && \
+    mv onnxruntime-linux-x64-${ONNX_VERSION} /onnxruntime && \
+    rm onnxruntime-linux-x64-${ONNX_VERSION}.tgz && \
+    ls -lah /onnxruntime/lib/
+
+# Set up ONNX paths for CGO
+ENV CGO_ENABLED=1
+ENV CGO_CFLAGS="-I/onnxruntime/include"
+ENV CGO_LDFLAGS="-L/onnxruntime/lib -lonnxruntime"
+ENV GOPROXY=https://proxy.golang.org
+ENV GOSUMDB=sum.golang.org
+
+# Copy go files
+COPY go.mod go.sum ./
+
+# Copy source
+COPY . ./
+
+# Copy vocab files needed by BERT
+COPY sentAnalysis/finbert/ /app/sentAnalysis/finbert/
+
+# Build with ONNX tag enabled
+ENV GOFLAGS=-buildvcs=false
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    GOOS=$TARGETOS GOARCH=$TARGETARCH sh -c 'if [ -d vendor ]; then MOD="-mod=vendor"; else go mod download; MOD=""; fi; \
+    go build $MOD -tags onnx -ldflags="-s -w" -trimpath -o /out/dogonomics ./'
+
+# Final runtime stage
+FROM --platform=$TARGETOS/$TARGETARCH alpine:latest
+
+# Install runtime dependencies
+RUN apk add --no-cache ca-certificates libstdc++ libgomp
+
+WORKDIR /
+
+# Copy the ONNX Runtime shared libraries
+COPY --from=builder /onnxruntime/lib/*.so* /usr/local/lib/
+
+# Run ldconfig to register the libraries (Alpine uses /etc/ld-musl-x86_64.path)
+RUN echo "/usr/local/lib" > /etc/ld-musl-x86_64.path && \
+    ls -lah /usr/local/lib/ && \
+    ldconfig /usr/local/lib/ || true
+
+# Copy the binary
+COPY --from=builder /out/dogonomics /dogonomics
+
+# Copy ONNX model and vocab files
+COPY --from=builder /app/sentAnalysis/DoggoFinBERT.onnx /sentAnalysis/DoggoFinBERT.onnx
+COPY --from=builder /app/sentAnalysis/finbert/ /sentAnalysis/finbert/
+
+# Set LD_LIBRARY_PATH so the runtime can find libonnxruntime.so
+ENV LD_LIBRARY_PATH=/usr/local/lib
+
+EXPOSE 8080
+ENTRYPOINT ["/dogonomics"]
