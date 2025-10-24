@@ -1,3 +1,6 @@
+//go:build onnx
+// +build onnx
+
 package BertInference
 
 import (
@@ -49,11 +52,17 @@ func InitializeBERT(modelPath, vocabPath string) error {
 		}
 
 		log.Println("Attempting to initialize ONNX Runtime environment...")
+		log.Printf("ONNX Runtime library path: C:/onnxruntime/lib/onnxruntime.dll")
+		log.Printf("Checking if library exists...")
+
 		err2 := ort.InitializeEnvironment()
 		if err2 != nil {
 			envMutex.Unlock()
-			return fmt.Errorf("failed to initialize ONNX Runtime: %v", err)
+			return fmt.Errorf("failed to initialize ONNX Runtime: %v", err2)
 		}
+
+		log.Println("ONNX Runtime environment initialized successfully")
+		envInitialized = true
 	}
 	envMutex.Unlock()
 
@@ -87,7 +96,9 @@ func setPlatformSpecificLibraryPath() error {
 	case "windows":
 		ort.SetSharedLibraryPath("C:/onnxruntime/lib/onnxruntime.dll")
 	case "linux":
-		ort.SetSharedLibraryPath("libonnxruntime.so")
+		// In Docker, the library is at /usr/local/lib/libonnxruntime.so
+		// For local Linux, try the full path first, then fall back to system search
+		ort.SetSharedLibraryPath("/usr/local/lib/libonnxruntime.so")
 	default:
 		return fmt.Errorf("unsupported operating system: %s", runtime.GOOS)
 	}

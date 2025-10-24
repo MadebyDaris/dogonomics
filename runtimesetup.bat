@@ -24,17 +24,35 @@ if exist "C:\onnxruntime\lib\onnxruntime.dll" (
     )
 )
 
+REM Check if ARM64 folder exists and use it
+if exist "C:\onnxruntime\onnxruntime-win-arm64-1.17.1\" (
+    echo Found existing ARM64 ONNX Runtime 1.17.1 installation
+    echo WARNING: You need ONNX Runtime 1.19.0 to match the Go library version
+    echo.
+    set /p upgrade="Do you want to download and install 1.19.0? (y/n): "
+    if /i "!upgrade!"=="y" (
+        echo Removing old version...
+        rmdir /S /Q "C:\onnxruntime\onnxruntime-win-arm64-1.17.1"
+        goto :download
+    ) else (
+        echo Keeping 1.17.1 - you may need to downgrade the Go library
+        echo Run: go get github.com/yalue/onnxruntime_go@v1.17.0
+        goto :setenv
+    )
+)
+
+:download
 echo Creating installation directory...
 if not exist "C:\onnxruntime" mkdir "C:\onnxruntime"
 
-echo Downloading ONNX Runtime v1.17.1 for Windows x64...
+echo Downloading ONNX Runtime v1.19.0 for Windows x64...
 echo This may take a few minutes depending on your internet connection...
 
 powershell -Command ^
     "try {" ^
     "    $ProgressPreference = 'SilentlyContinue';" ^
-    "    $url = 'https://github.com/microsoft/onnxruntime/releases/download/v1.17.1/onnxruntime-win-arm64-1.17.1.zip';" ^
-    "    $output = 'C:\onnxruntime\onnxruntime-win-x64-1.21.0.zip';" ^
+    "    $url = 'https://github.com/microsoft/onnxruntime/releases/download/v1.19.0/onnxruntime-win-x64-1.19.0.zip';" ^
+    "    $output = 'C:\onnxruntime\onnxruntime-win-x64-1.19.0.zip';" ^
     "    Invoke-WebRequest -Uri $url -OutFile $output;" ^
     "    Write-Host 'Download completed successfully';" ^
     "} catch {" ^
@@ -52,12 +70,12 @@ if %ERRORLEVEL% neq 0 (
 echo Extracting ONNX Runtime...
 powershell -Command ^
     "try {" ^
-    "    $zipPath = 'C:\onnxruntime\onnxruntime-win-x64-1.21.0.zip';" ^
+    "    $zipPath = 'C:\onnxruntime\onnxruntime-win-x64-1.19.0.zip';" ^
     "    $extractPath = 'C:\onnxruntime';" ^
     "    Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force;" ^
-    "    $sourcePath = 'C:\onnxruntime\onnxruntime-win-x64-1.21.0\*';" ^
+    "    $sourcePath = 'C:\onnxruntime\onnxruntime-win-x64-1.19.0\*';" ^
     "    Copy-Item -Path $sourcePath -Destination $extractPath -Recurse -Force;" ^
-    "    Remove-Item -Path 'C:\onnxruntime\onnxruntime-win-x64-1.21.0' -Recurse -Force;" ^
+    "    Remove-Item -Path 'C:\onnxruntime\onnxruntime-win-x64-1.19.0' -Recurse -Force;" ^
     "    Remove-Item -Path $zipPath -Force;" ^
     "    Write-Host 'Extraction completed successfully';" ^
     "} catch {" ^

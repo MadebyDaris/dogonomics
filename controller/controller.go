@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	finnhubClient *DogonomicsFetching.Client
+	finnhubClient            *DogonomicsFetching.Client
 	dogonomicsFetchingClient *DogonomicsFetching.Client
 )
 
@@ -24,15 +24,15 @@ type ErrorResponse struct {
 
 // NewsSentimentBERTResponse is the response schema for /finnewsBert/{symbol}
 type NewsSentimentBERTResponse struct {
-	Symbol          string                                 `json:"symbol"`
-	AggregateResult *sentAnalysis.StockSentimentAnalysis   `json:"aggregate_result"`
-	NewsItems       []sentAnalysis.NewsItem                `json:"news_items"`
+	Symbol          string                               `json:"symbol"`
+	AggregateResult *sentAnalysis.StockSentimentAnalysis `json:"aggregate_result"`
+	NewsItems       []sentAnalysis.NewsItem              `json:"news_items"`
 }
 
 // SentimentOnlyResponse is the response schema for /sentiment/{symbol}
 type SentimentOnlyResponse struct {
-	Symbol    string                                 `json:"symbol"`
-	Sentiment *sentAnalysis.StockSentimentAnalysis   `json:"sentiment"`
+	Symbol    string                               `json:"symbol"`
+	Sentiment *sentAnalysis.StockSentimentAnalysis `json:"sentiment"`
 }
 
 func Init(fc *DogonomicsFetching.Client) {
