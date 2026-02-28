@@ -19,35 +19,31 @@ type Stock struct {
 	PreviousClosePrice float64 `json:"pc"`
 }
 
-func RequestTicker(symbol string, date time.Time) (Stock, error) {
-	// init client
+func RequestTicker(ctx context.Context, symbol string, date time.Time) (Stock, error) {
 	c := polygon.New(os.Getenv("POLYGON_API_KEY"))
-	// set params
+
 	params := models.GetDailyOpenCloseAggParams{
 		Ticker: symbol,
 		Date:   models.Date(date),
 	}
-	// make request
-	res, err := c.GetDailyOpenCloseAgg(context.Background(), &params)
+
+	res, err := c.GetDailyOpenCloseAgg(ctx, &params)
 	if err != nil {
 		return Stock{}, err
 	}
-	// do something with the result
-	// Build and return the Stock struct
-	stock := Stock{
+
+	return Stock{
 		Symbol:             symbol,
 		Current:            res.Close,
 		High:               res.High,
 		Low:                res.Low,
 		OpenPrice:          res.Open,
-		PreviousClosePrice: 0, // Not provided by this endpoint
-	}
-	return stock, nil
+		PreviousClosePrice: 0,
+	}, nil
 }
 
-// TODO SERVER SYSTEM TO STORE DATA AND REQUEST FROM SERVER
-func RequestHistoricalData(symbol string, days int) ([]DogonomicsProcessing.ChartDataPoint, error) {
-	// init client
+// RequestHistoricalData fetches daily OHLCV data from Polygon.
+func RequestHistoricalData(ctx context.Context, symbol string, days int) ([]DogonomicsProcessing.ChartDataPoint, error) {
 	c := polygon.New(os.Getenv("POLYGON_API_KEY"))
 
 	now := time.Now().UTC()
@@ -62,12 +58,12 @@ func RequestHistoricalData(symbol string, days int) ([]DogonomicsProcessing.Char
 		Multiplier: 1,
 		Limit:      &limit,
 	}
-	// make request
-	res, err := c.GetAggs(context.Background(), &params)
+
+	res, err := c.GetAggs(ctx, &params)
 	if err != nil {
 		return []DogonomicsProcessing.ChartDataPoint{}, err
 	}
-	// Build and return the ChartDataPoint slice
+
 	chartData := []DogonomicsProcessing.ChartDataPoint{}
 	for _, agg := range res.Results {
 		chartData = append(chartData, DogonomicsProcessing.ChartDataPoint{

@@ -1,14 +1,59 @@
 version: '3.8'
 services:
+  timescaledb:
+    image: timescale/timescaledb:latest-pg14
+    environment:
+      - POSTGRES_USER=dogonomics
+      - POSTGRES_PASSWORD=dogonomics
+      - POSTGRES_DB=dogonomics
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./internal/database/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dogonomics"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
   dogonomics:
     build: .
     ports:
-      - "8080:8080"
+      - "${PORT:-8080}:${PORT:-8080}"
     environment:
       - FINNHUB_API_KEY=${FINNHUB_API_KEY}
       - EODHD_API_KEY=${EODHD_API_KEY}
+      - PORT=${PORT:-8080}
+      - DB_HOST=timescaledb
+      - DB_PORT=5432
+      - DB_USER=dogonomics
+      - DB_PASSWORD=dogonomics
+      - DB_NAME=dogonomics
+      - DB_SSLMODE=disable
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     volumes:
       - ./sentAnalysis/DoggoFinBERT.onnx:/sentAnalysis/DoggoFinBERT.onnx:ro
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     restart: unless-stopped
   
   # ONNX-enabled variant with BERT sentiment analysis
@@ -17,13 +62,28 @@ services:
       context: .
       dockerfile: Dockerfile.onnx
     ports:
-      - "8081:8080"
+      - "${ONNX_PORT:-8081}:${PORT:-8080}"
     environment:
       - FINNHUB_API_KEY=${FINNHUB_API_KEY}
       - EODHD_API_KEY=${EODHD_API_KEY}
+      - PORT=${PORT:-8080}
+      - DB_HOST=timescaledb
+      - DB_PORT=5432
+      - DB_USER=dogonomics
+      - DB_PASSWORD=dogonomics
+      - DB_NAME=dogonomics
+      - DB_SSLMODE=disable
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     restart: unless-stopped
     profiles:
       - onnx
+
   prometheus:
     image: prom/prometheus:latest
     ports:
@@ -41,3 +101,7 @@ services:
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
     restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:

@@ -8,11 +8,7 @@ import (
 	"github.com/MadebyDaris/dogonomics/sentAnalysis"
 )
 
-// StockDetailData represents detailed stock information
-// including company details, technical indicators, and sentiment data.
-// Made to fit the Frontend requirements on dogonomics.
-// It includes fields for company name, description, current price,
-// change percentage, exchange, symbol, asset type, and various financial metrics.
+// StockDetailData represents the comprehensive stock payload sent to the frontend.
 type StockDetailData struct {
 	CompanyName         string                  `json:"companyName"`
 	Description         string                  `json:"description"`

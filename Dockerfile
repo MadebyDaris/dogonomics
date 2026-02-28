@@ -36,5 +36,6 @@ WORKDIR /
 COPY --from=builder /out/dogonomics /dogonomics
 COPY --from=builder /app/sentAnalysis/DoggoFinBERT.onnx /sentAnalysis/DoggoFinBERT.onnx
 
-EXPOSE 8080
+EXPOSE ${PORT:-8080}
+ENV PORT=8080
 ENTRYPOINT ["/dogonomics"]

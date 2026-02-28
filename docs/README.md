@@ -1,82 +1,109 @@
 # Dogonomics API Docs
 
-This folder documents how to explore and test the Dogonomics API using Swagger UI, monitor it with Prometheus and Grafana, and run it locally or with Docker.
+This folder documents how to explore and test the Dogonomics API.
 
-## Quick links
+## Quick Links
 
-- Swagger UI: <http://localhost:8080/swagger/index.html>
-- OpenAPI JSON: <http://localhost:8080/swagger/doc.json>
-- Prometheus metrics: <http://localhost:8080/metrics>
-- Grafana (docker-compose): <http://localhost:3000> (user: admin, pass: admin)
+| Service          | URL                                              |
+|------------------|--------------------------------------------------|
+| Swagger UI       | <http://localhost:8080/swagger/index.html>       |
+| OpenAPI JSON     | <http://localhost:8080/swagger/doc.json>         |
+| Prometheus       | <http://localhost:8080/metrics>                  |
+| Grafana (Docker) | <http://localhost:3000> (admin / admin)          |
 
-## Endpoints overview
+## Endpoints
 
-All endpoints are documented in Swagger with parameters and example responses. Highlights:
+All endpoints are documented in Swagger with parameters and example responses.
 
-- GET /ticker/{symbol} — Aggregated ticker data for the specified date (query: date=YYYY-MM-DD)
-- GET /quote/{symbol} — Current quote via Finnhub
-- GET /finnews/{symbol} — Recent news from EODHD
-- GET /finnewsBert/{symbol} — News with BERT sentiment + aggregate
-- GET /sentiment/{symbol} — Aggregate sentiment only
-- GET /stock/{symbol} — Comprehensive stock details
-- GET /profile/{symbol} — Company profile
-- GET /chart/{symbol} — Historical price data (query: days)
-- GET /health — Service health
+### Stock & Market Data
 
-## Try it out in Swagger
+| Method | Path                 | Description                  |
+|--------|----------------------|------------------------------|
+| GET    | `/ticker/:symbol`    | Aggregated ticker data       |
+| GET    | `/quote/:symbol`     | Current quote (Finnhub)      |
+| GET    | `/profile/:symbol`   | Company profile              |
+| GET    | `/stock/:symbol`     | Comprehensive stock detail   |
+| GET    | `/chart/:symbol`     | Historical price data        |
 
-1. Start the API (locally or via docker-compose).
-2. Open Swagger UI at <http://localhost:8080/swagger/index.html>.
-3. Expand an endpoint, click “Try it out”, fill required params (e.g., AAPL), and Execute.
-4. Responses are returned directly in the browser.
+### News & Sentiment
 
-If an endpoint relies on external APIs, make sure the corresponding environment variables are set (see below).
+| Method | Path                        | Description                              |
+|--------|-----------------------------|------------------------------------------|
+| GET    | `/finnews/:symbol`          | Company news (EODHD)                     |
+| GET    | `/finnewsBert/:symbol`      | News with FinBERT sentiment + aggregate  |
+| GET    | `/sentiment/:symbol`        | Aggregate sentiment only                 |
+| POST   | `/finbert/inference`        | Run FinBERT on custom text               |
+| GET    | `/news/general`             | General market news (multi-source)       |
+| GET    | `/news/general/sentiment`   | General news with FinBERT analysis       |
+| GET    | `/news/symbol/:symbol`      | Multi-source symbol news                 |
+| GET    | `/news/search?q=keyword`    | Search news by keyword                   |
 
-## Environment variables
+### Treasury & Bonds
 
-Create a .env file in the repository root (same folder as dogonomics.go):
+| Method | Path                    | Description                    |
+|--------|-------------------------|--------------------------------|
+| GET    | `/treasury/yield-curve` | Latest yield curve             |
+| GET    | `/treasury/rates`       | Historical rates (query: days) |
+| GET    | `/treasury/debt`        | Public debt data (query: days) |
 
-- FINNHUB_API_KEY: Required for quote and some profile data
-- EODHD_API_KEY: Required for EODHD news
+### Commodities
 
-## Run locally
+| Method | Path                        | Description                      |
+|--------|-----------------------------|----------------------------------|
+| GET    | `/commodities/oil`          | Oil prices (query: type=wti/brent)|
+| GET    | `/commodities/gas`          | Natural gas prices               |
+| GET    | `/commodities/metals`       | Metals (query: metal=copper/aluminum) |
+| GET    | `/commodities/agriculture`  | Agriculture (query: commodity=wheat/corn/...) |
 
-You can run the server directly with Go:
+### System
 
-1. Install Go (matching the version in go.mod).
-2. Set environment variables in .env.
-3. Run: go run dogonomics.go
-4. Open Swagger at <http://localhost:8080/swagger/index.html>
+| Method | Path       | Description        |
+|--------|------------|--------------------|
+| GET    | `/health`  | Health check       |
+| GET    | `/metrics` | Prometheus metrics |
 
-Notes:
+## Environment Variables
 
-- Sentiment (FinBERT ONNX) is optional at runtime. The default build in Docker disables ONNX to avoid CGO issues. To enable ONNX, build with the onnx tag and ensure ONNX dependencies are installed.
+Create a `.env` file in the repository root:
+
+| Variable              | Required | Description                       |
+|-----------------------|----------|-----------------------------------|
+| `FINNHUB_API_KEY`     | Yes      | Finnhub quotes, profiles          |
+| `EODHD_API_KEY`       | No       | EODHD news                        |
+| `ALPHA_VANTAGE_API_KEY`| No      | Commodities, Alpha Vantage news   |
+| `POLYGON_API_KEY`     | No       | Polygon ticker & chart data       |
+| `DB_HOST`             | No       | PostgreSQL host (default: localhost) |
+| `DB_PORT`             | No       | PostgreSQL port (default: 5432)   |
+| `DB_USER`             | No       | Database user (default: dogonomics)|
+| `DB_PASSWORD`         | No       | Database password                 |
+| `DB_NAME`             | No       | Database name (default: dogonomics)|
+
+## Run Locally
+
+```bash
+go run dogonomics.go
+```
+
+Open Swagger at <http://localhost:8080/swagger/index.html>.
 
 ## Run with Docker
 
-Build and start everything (API + Prometheus + Grafana) with docker-compose in the repo root:
-
-- docker compose up --build
-
-Then visit:
+```bash
+docker compose up --build
+```
 
 - API: <http://localhost:8080>
-- Swagger UI: <http://localhost:8080/swagger/index.html>
 - Prometheus: <http://localhost:9090>
-- Grafana: <http://localhost:3000> (admin/admin)
+- Grafana: <http://localhost:3000>
 
-To run just the API container:
+## FinBERT / ONNX Notes
 
-- docker build -t dogonomics:latest .
-- docker run -p 8080:8080 --env-file .env dogonomics:latest
+- Default Docker build excludes ONNX via build tags and uses a stub.
+- To enable ONNX in Docker, provide a base image with ONNX Runtime and build with `-tags=onnx`.
+- Locally, ensure ONNX Runtime is installed (see `runtimesetup.bat`).
 
-## Observability
+## Further Reading
 
-- Metrics: Exposed at /metrics in Prometheus format.
-- Default Grafana datasource connects to Prometheus (provisioned in monitoring/grafana/provisioning/datasources).
-- You can add dashboards by placing JSON files in monitoring/grafana/provisioning/dashboards/ and referencing them in a provisioner file.
-
-## FinBERT / ONNX notes
-
-- Default Docker build excludes ONNX via build tags and uses a stub to keep the API working.
-- If you need ONNX in Docker, provide a base image with the required libraries and build with -tags=onnx, or run locally with the provided scripts ensuring ONNX Runtime is installed.
+- [ONNX & FinBERT Devlog](ortinference.md)
+- [ROI with Sentiment Analysis](ROI_with_Sentiment_Analysis.md)
+- [Treasury & Commodities API Guide](TREASURY_COMMODITIES.md)
