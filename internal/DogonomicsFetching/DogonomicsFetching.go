@@ -1,6 +1,7 @@
 package DogonomicsFetching
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -8,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/MadebyDaris/dogonomics/internal/DogonomicsProcessing"
@@ -28,7 +30,7 @@ type Quote struct {
 
 const baseURL = "https://finnhub.io/api/v1"
 
-// Client struct
+// Client wraps the Finnhub API.
 type Client struct {
 	APIKey     string
 	HTTPClient *http.Client
@@ -41,10 +43,8 @@ func NewClient() *Client {
 	}
 }
 
-// Make Request helper function for finnHub API calls with specific endpoint and parameters
-// It constructs the URL with the API key and parameters, makes the GET request,
-// and returns the response body or an error if the request fails.
-func (c *Client) makeRequest(endpoint string, params map[string]string) ([]byte, error) {
+// makeRequest is a context-aware helper for Finnhub API calls.
+func (c *Client) makeRequest(ctx context.Context, endpoint string, params map[string]string) ([]byte, error) {
 	if c.APIKey == "" {
 		return nil, fmt.Errorf("FINNHUB_API_KEY environment variable not set")
 	}
@@ -61,7 +61,12 @@ func (c *Client) makeRequest(endpoint string, params map[string]string) ([]byte,
 	}
 	u.RawQuery = q.Encode()
 
-	resp, err := c.HTTPClient.Get(u.String())
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -74,8 +79,8 @@ func (c *Client) makeRequest(endpoint string, params map[string]string) ([]byte,
 	return io.ReadAll(resp.Body)
 }
 
-func (c *Client) GetCompanyProfile(symbol string) (*DogonomicsProcessing.CompanyProfile, error) {
-	data, err := c.makeRequest("/stock/profile2", map[string]string{
+func (c *Client) GetCompanyProfile(ctx context.Context, symbol string) (*DogonomicsProcessing.CompanyProfile, error) {
+	data, err := c.makeRequest(ctx, "/stock/profile2", map[string]string{
 		"symbol": symbol,
 	})
 	if err != nil {
@@ -91,8 +96,8 @@ func (c *Client) GetCompanyProfile(symbol string) (*DogonomicsProcessing.Company
 	return &profile, err
 }
 
-func (c *Client) GetQuote(symbol string) (*Quote, error) {
-	data, err := c.makeRequest("/quote", map[string]string{
+func (c *Client) GetQuote(ctx context.Context, symbol string) (*Quote, error) {
+	data, err := c.makeRequest(ctx, "/quote", map[string]string{
 		"symbol": symbol,
 	})
 	if err != nil {
@@ -104,8 +109,8 @@ func (c *Client) GetQuote(symbol string) (*Quote, error) {
 	return &quote, err
 }
 
-func (c *Client) GetBasicFinancials(symbol string) (*DogonomicsProcessing.BasicFinancials, error) {
-	data, err := c.makeRequest("/stock/metric", map[string]string{
+func (c *Client) GetBasicFinancials(ctx context.Context, symbol string) (*DogonomicsProcessing.BasicFinancials, error) {
+	data, err := c.makeRequest(ctx, "/stock/metric", map[string]string{
 		"symbol": symbol,
 		"metric": "all",
 	})
@@ -124,28 +129,61 @@ func (c *Client) GetBasicFinancials(symbol string) (*DogonomicsProcessing.BasicF
 	return &financials, err
 }
 
-func (c *Client) BuildStockDetailData(symbol string) (*DogonomicsProcessing.StockDetailData, error) {
-	chart, err := PolygonClient.RequestHistoricalData(symbol, 30)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch historical data: %v", err)
+// BuildStockDetailData fetches chart, profile, financials, and quote concurrently.
+func (c *Client) BuildStockDetailData(ctx context.Context, symbol string) (*DogonomicsProcessing.StockDetailData, error) {
+	var (
+		chart      []DogonomicsProcessing.ChartDataPoint
+		profile    *DogonomicsProcessing.CompanyProfile
+		financials *DogonomicsProcessing.BasicFinancials
+		quote      *Quote
+
+		chartErr, profileErr, financialsErr, quoteErr error
+		wg                                            sync.WaitGroup
+	)
+
+	wg.Add(4)
+
+	go func() {
+		defer wg.Done()
+		chart, chartErr = PolygonClient.RequestHistoricalData(ctx, symbol, 30)
+	}()
+
+	go func() {
+		defer wg.Done()
+		profile, profileErr = c.GetCompanyProfile(ctx, symbol)
+	}()
+
+	go func() {
+		defer wg.Done()
+		financials, financialsErr = c.GetBasicFinancials(ctx, symbol)
+	}()
+
+	go func() {
+		defer wg.Done()
+		quote, quoteErr = c.GetQuote(ctx, symbol)
+	}()
+
+	wg.Wait()
+
+	// Check for context cancellation first
+	if ctx.Err() != nil {
+		return nil, fmt.Errorf("request cancelled: %w", ctx.Err())
 	}
 
-	profile, err := c.GetCompanyProfile(symbol)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get company profile: %v", err)
+	if chartErr != nil {
+		return nil, fmt.Errorf("failed to fetch historical data: %v", chartErr)
+	}
+	if profileErr != nil {
+		return nil, fmt.Errorf("failed to get company profile: %v", profileErr)
+	}
+	if financialsErr != nil {
+		return nil, fmt.Errorf("failed to get basic financials: %v", financialsErr)
+	}
+	if quoteErr != nil {
+		return nil, fmt.Errorf("failed to get quote: %v", quoteErr)
 	}
 
-	financials, err := c.GetBasicFinancials(symbol)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get basic financials: %v", err)
-	}
-
-	quote, err := c.GetQuote(symbol)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get quote: %v", err)
-	}
-
-		var peRatio, eps float64
+	var peRatio, eps float64
 	if financials != nil {
 		if val, exists := financials.Metric["peBasicExclExtraTTM"]; exists {
 			if v, ok := val.(float64); ok {
@@ -165,12 +203,12 @@ func (c *Client) BuildStockDetailData(symbol string) (*DogonomicsProcessing.Stoc
 		ChangePercentage:    quote.PercentChange,
 		Exchange:            profile.Exchange,
 		Symbol:              symbol,
-		AssetType:           "Stock", // Default, could be enhanced
-		EBITDA:              "N/A",   // Not available on free plan
+		AssetType:           "Stock",
+		EBITDA:              "N/A",
 		PERatio:             peRatio,
 		EPS:                 eps,
 		AboutDescription:    fmt.Sprintf("%s is listed on %s", profile.Name, profile.Exchange),
-		ChartData:           chart,                                       // Fetch last 30 days of data
+		ChartData:           chart,
 		TechnicalIndicators: []DogonomicsProcessing.TechnicalIndicator{},
 		SentimentData:       []DogonomicsProcessing.ChartDataPoint{},
 		News:                []sentAnalysis.NewsItem{},

@@ -75,5 +75,6 @@ COPY --from=builder /app/sentAnalysis/finbert/ /sentAnalysis/finbert/
 # Set LD_LIBRARY_PATH so the runtime can find libonnxruntime.so
 ENV LD_LIBRARY_PATH=/usr/local/lib
 
-EXPOSE 8080
+EXPOSE ${PORT:-8080}
+ENV PORT=8080
 ENTRYPOINT ["/dogonomics"]

@@ -1,6 +1,7 @@
 package sentAnalysis
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -9,8 +10,10 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/MadebyDaris/dogonomics/BertInference"
+	"github.com/MadebyDaris/dogonomics/internal/workerpool"
 )
 
 var apiKey = os.Getenv("EODHD_API_KEY")
@@ -44,14 +47,20 @@ type NewsItem struct {
 	Tags          []string                    `json:"tags"`
 }
 
-func FetchData(symbol string) ([]NewsItem, error) {
+func FetchData(ctx context.Context, symbol string) ([]NewsItem, error) {
 	endpoint := "https://eodhd.com/api/news"
 	params := url.Values{}
 	params.Set("api_token", apiKey)
 	params.Set("s", symbol)
 	params.Set("limit", "4")
 	fullURL := fmt.Sprintf("%s?%s", endpoint, params.Encode())
-	resp, respErr := http.Get(fullURL)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fullURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %v", err)
+	}
+
+	resp, respErr := http.DefaultClient.Do(req)
 	if respErr != nil {
 		return nil, respErr
 	}
@@ -86,8 +95,8 @@ func RunBERTInferenceONNX(text, modelPath, vocabPath string) (*BertInference.BER
 	return BertInference.RunBERTInference(text, modelPath)
 }
 
-// Analyses numerous news items and gives an overall analysis
-func FetchStockSentiment(newsItems []NewsItem) *StockSentimentAnalysis {
+// FetchStockSentiment analyses news items using a worker pool for concurrent BERT inference.
+func FetchStockSentiment(ctx context.Context, newsItems []NewsItem) *StockSentimentAnalysis {
 	if len(newsItems) == 0 {
 		return &StockSentimentAnalysis{
 			OverallSentiment: 0.0,
@@ -99,35 +108,55 @@ func FetchStockSentiment(newsItems []NewsItem) *StockSentimentAnalysis {
 		}
 	}
 
-	var totalSentiment float64 = 0
-	var totalConfidence float64 = 0
-	var positiveCount int = 0
-	var negativeCount int = 0
-	var neutralCount int = 0
+	// Run BERT analysis concurrently via worker pool
+	type sentimentResult struct {
+		index     int
+		sentiment *BertInference.BERTSentiment
+	}
 
-	validArticles := 0
+	var (
+		mu      sync.Mutex
+		results []sentimentResult
+	)
 
-	for articleIndex := range newsItems {
-		article := newsItems[articleIndex]
-		log.Printf("Processing article %d/%d: %s", articleIndex+1, len(newsItems), article.Title)
-
-		sentiment, err := AnalyzeNews(article.Title, article.Content)
-		if err != nil {
-			log.Printf("Error analyzing news item: %v", err)
-			continue
+	tasks := make([]workerpool.Task, len(newsItems))
+	for i, article := range newsItems {
+		idx := i
+		title := article.Title
+		content := article.Content
+		tasks[i] = func(_ context.Context) error {
+			log.Printf("Processing article %d/%d: %s", idx+1, len(newsItems), title)
+			sentiment, err := AnalyzeNews(title, content)
+			if err != nil {
+				log.Printf("Error analyzing news item: %v", err)
+				return nil // non-fatal; we skip this article
+			}
+			mu.Lock()
+			results = append(results, sentimentResult{index: idx, sentiment: sentiment})
+			mu.Unlock()
+			return nil
 		}
-		if sentiment.Confidence < 0.1 {
+	}
+
+	workerpool.Run(ctx, 3, tasks)
+
+	// Apply results back to newsItems and compute aggregates
+	var totalSentiment float64
+	var totalConfidence float64
+	var positiveCount, negativeCount, neutralCount, validArticles int
+
+	for _, r := range results {
+		if r.sentiment == nil || r.sentiment.Confidence < 0.1 {
 			continue
 		}
 		validArticles++
+		newsItems[r.index].BERTSentiment = *r.sentiment
 
-		newsItems[articleIndex].BERTSentiment = *sentiment
-
-		weightedSentiment := sentiment.Score * sentiment.Confidence
+		weightedSentiment := r.sentiment.Score * r.sentiment.Confidence
 		totalSentiment += weightedSentiment
-		totalConfidence += sentiment.Confidence
+		totalConfidence += r.sentiment.Confidence
 
-		switch sentiment.Label {
+		switch r.sentiment.Label {
 		case "positive":
 			positiveCount++
 		case "negative":
@@ -192,20 +221,28 @@ func generateRecommendation(sentiment, confidence, positiveRatio, negativeRatio 
 	return "HOLD"
 }
 
-func FetchAndAnalyzeNews(symbol string) ([]NewsItem, error) {
-	newsItems, err := FetchData(symbol)
+// FetchAndAnalyzeNews fetches news and runs BERT analysis via worker pool.
+func FetchAndAnalyzeNews(ctx context.Context, symbol string) ([]NewsItem, error) {
+	newsItems, err := FetchData(ctx, symbol)
 	if err != nil {
 		return nil, err
 	}
 
-	for news := range newsItems {
-		analysis, err := AnalyzeNews(newsItems[news].Title, newsItems[news].Content)
-		if err != nil {
-			log.Printf("Error analyzing news item: %v", err)
-			continue
+	tasks := make([]workerpool.Task, len(newsItems))
+	for i := range newsItems {
+		idx := i
+		tasks[i] = func(_ context.Context) error {
+			analysis, err := AnalyzeNews(newsItems[idx].Title, newsItems[idx].Content)
+			if err != nil {
+				log.Printf("Error analyzing news item: %v", err)
+				return nil // non-fatal
+			}
+			newsItems[idx].BERTSentiment = *analysis
+			return nil
 		}
-		newsItems[news].BERTSentiment = *analysis
 	}
+
+	workerpool.Run(ctx, 3, tasks)
 	return newsItems, nil
 }
 

@@ -3,11 +3,12 @@ package main
 // @title       Dogonomics API
 // @version     1.0
 // @description Dogonomics API for stock data, news, and sentiment. Swagger UI is available at /swagger/index.html
-// @host        localhost:8080
+// @host        localhost:${PORT}
 // @BasePath    /
 // @schemes     http
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -19,6 +20,9 @@ import (
 	"github.com/MadebyDaris/dogonomics/controller"
 	"github.com/MadebyDaris/dogonomics/docs"
 	"github.com/MadebyDaris/dogonomics/internal/DogonomicsFetching"
+	"github.com/MadebyDaris/dogonomics/internal/cache"
+	"github.com/MadebyDaris/dogonomics/internal/database"
+	"github.com/MadebyDaris/dogonomics/middleware"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"github.com/prometheus/client_golang/prometheus"
@@ -37,9 +41,25 @@ func main() {
 		return
 	}
 
-	// Initialize clients
 	finnhubClient := DogonomicsFetching.NewClient()
 	controller.Init(finnhubClient)
+
+	if err := database.Connect(database.LoadConfigFromEnv()); err != nil {
+		log.Printf("WARNING: Database connection failed: %v", err)
+		log.Printf("API will continue without database logging")
+	} else {
+		log.Println("Database connected successfully")
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := database.HealthCheck(ctx); err != nil {
+			log.Printf("WARNING: Database health check failed: %v", err)
+		}
+	}
+
+	if err := cache.Connect(cache.LoadConfigFromEnv()); err != nil {
+		log.Printf("WARNING: Redis connection failed: %v", err)
+		log.Printf("API will continue without caching")
+	}
 
 	fmt.Println("Initializing BERT model...")
 	modelPath := "./sentAnalysis/DoggoFinBERT.onnx"
@@ -51,6 +71,8 @@ func main() {
 	go func() {
 		<-c
 		fmt.Println("\nShutting down server...")
+		cache.Close()
+		database.Close()
 		BertInference.CleanupBERT()
 		fmt.Println("Cleanup completed")
 		os.Exit(0)
@@ -69,8 +91,6 @@ func main() {
 
 	// Prometheus metrics
 	var (
-		// include service and handler labels to make dashboards clearer while
-		// keeping cardinality low by normalizing paths and grouping status codes
 		httpRequestsTotal = prometheus.NewCounterVec(
 			prometheus.CounterOpts{
 				Name: "http_requests_total",
@@ -90,24 +110,20 @@ func main() {
 	)
 
 	prometheus.MustRegister(httpRequestsTotal, httpRequestDuration)
+	// Middleware
+	r.Use(middleware.DatabaseLogger())
+	r.Use(middleware.CacheMiddleware(5 * time.Minute))
 
-	// Metrics middleware
 	r.Use(func(c *gin.Context) {
 		start := time.Now()
 		c.Next()
 
-		// Normalize status code to class (2xx, 3xx, 4xx, 5xx)
 		statusCode := c.Writer.Status()
 		statusClass := fmt.Sprintf("%dxx", statusCode/100)
 
-		// Determine handler (use full route path if available)
 		handler := c.FullPath()
 		if handler == "" {
-			// fallback: strip variable segments (simple heuristic)
 			handler = c.Request.URL.Path
-			// replace sequences of digits or all-caps segments like symbols with :param
-			// e.g. /stock/IBM -> /stock/:param
-			// keep it simple to avoid importing regex package
 			segs := make([]string, 0)
 			for _, s := range splitPath(handler) {
 				if looksLikeParam(s) {
@@ -121,22 +137,24 @@ func main() {
 
 		duration := time.Since(start).Seconds()
 
-		serviceName := "dogonomics"
-		httpRequestsTotal.WithLabelValues(serviceName, c.Request.Method, handler, statusClass).Inc()
-		httpRequestDuration.WithLabelValues(serviceName, c.Request.Method, handler).Observe(duration)
+		httpRequestsTotal.WithLabelValues("dogonomics", c.Request.Method, handler, statusClass).Inc()
+		httpRequestDuration.WithLabelValues("dogonomics", c.Request.Method, handler).Observe(duration)
 	})
 
-	// Expose Prometheus metrics
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
-	// Swagger docs
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
 	docs.SwaggerInfo.Title = "Dogonomics API"
 	docs.SwaggerInfo.Description = "Dogonomics API for stock data, news and sentiment"
 	docs.SwaggerInfo.Version = "1.0"
-	docs.SwaggerInfo.Host = "localhost:8080"
+	docs.SwaggerInfo.Host = "localhost:" + port
 	docs.SwaggerInfo.BasePath = "/"
 
-	r.GET("/swagger/*any", gin.WrapH(httpSwagger.Handler(httpSwagger.URL("http://localhost:8080/swagger/doc.json"))))
+	r.GET("/swagger/*any", gin.WrapH(httpSwagger.Handler(httpSwagger.URL("http://localhost:"+port+"/swagger/doc.json"))))
 
 	r.Use(func(c *gin.Context) {
 		path := c.Request.URL.Path
@@ -146,6 +164,7 @@ func main() {
 		c.Next()
 	})
 
+	// Stock & market data
 	r.GET("/ticker/:symbol", controller.GetTicker)
 	r.GET("/quote/:symbol", controller.GetQuote)
 	r.GET("/finnews/:symbol", controller.GetNews)
@@ -156,50 +175,39 @@ func main() {
 	r.GET("/chart/:symbol", controller.GetChartData)
 	r.GET("/health", controller.GetHealthStatus)
 
-	r.GET("/test", func(c *gin.Context) {
-		stock, err := DogonomicsFetching.NewClient().BuildStockDetailData("APPL")
-		if err != nil {
-			c.JSON(500, gin.H{"error": err.Error()})
-			return
-		}
-		c.JSON(200, gin.H{"message": "Test successful", "data": stock})
-	})
-	r.GET("/test-bert", func(c *gin.Context) {
-		text := "Apple Inc. reported strong quarterly earnings, beating analyst expectations."
-		sentiment, err := BertInference.RunBERTInference(text, modelPath)
-		if err != nil {
-			c.JSON(500, gin.H{"error": err.Error()})
-			return
-		}
-		c.JSON(200, gin.H{
-			"message": "BERT test completed",
-			"text":    text,
-			"result":  sentiment,
-		})
-	})
+	// Sentiment
+	r.POST("/finbert/inference", controller.RunFinBertInference)
 
-	fmt.Println("Starting Dogonomics API server...")
-	fmt.Println("Server will be available at: http://localhost:8080")
-	fmt.Println("Available endpoints:")
-	fmt.Println("  GET /stock/:symbol - Complete stock data")
-	fmt.Println("  GET /quote/:symbol - Current quote")
-	fmt.Println("  GET /profile/:symbol - Company profile")
-	fmt.Println("  GET /chart/:symbol - Chart data")
-	fmt.Println("  GET /news/:symbol - Company news")
-	fmt.Println("  GET /sentiment/:symbol - News sentiment")
-	fmt.Println("  GET /health - Health check")
+	// News
+	r.GET("/news/general", controller.GetGeneralFinanceNews)
+	r.GET("/news/general/sentiment", controller.GetGeneralNewsWithSentiment)
+	r.GET("/news/symbol/:symbol", controller.GetNewsBySymbolMultiSource)
+	r.GET("/news/search", controller.SearchNews)
 
-	if err := r.Run(); err != nil {
+	// Treasury
+	r.GET("/treasury/yield-curve", controller.GetTreasuryYieldCurve)
+	r.GET("/treasury/rates", controller.GetTreasuryRates)
+	r.GET("/treasury/debt", controller.GetPublicDebt)
+
+	// Commodities
+	r.GET("/commodities/oil", controller.GetCommodityOil)
+	r.GET("/commodities/gas", controller.GetCommodityGas)
+	r.GET("/commodities/metals", controller.GetCommodityMetals)
+	r.GET("/commodities/agriculture", controller.GetCommodityAgriculture)
+
+	fmt.Printf("Starting Dogonomics API server on :%s\n", port)
+	fmt.Printf("Swagger UI: http://localhost:%s/swagger/index.html\n", port)
+
+	if err := r.Run(":" + port); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
 }
 
-// Helper to split a URL path into segments, trimming leading/trailing slashes
+// splitPath splits a URL path into segments, trimming leading/trailing slashes.
 func splitPath(p string) []string {
 	if p == "" {
 		return []string{}
 	}
-	// trim leading/trailing
 	for len(p) > 0 && p[0] == '/' {
 		p = p[1:]
 	}
@@ -212,12 +220,11 @@ func splitPath(p string) []string {
 	return split(p, '/')
 }
 
-// looksLikeParam uses a simple heuristic to identify variable segments
+// looksLikeParam identifies variable path segments (digits, uppercase tickers, etc.).
 func looksLikeParam(s string) bool {
 	if s == "" {
 		return false
 	}
-	// If segment is all digits or contains dots (like timestamps) or is uppercase (ticker), treat as param
 	allDigits := true
 	allUpper := true
 	for i := 0; i < len(s); i++ {
@@ -235,7 +242,7 @@ func looksLikeParam(s string) bool {
 	return allDigits || allUpper
 }
 
-// joinPath joins path segments with '/'
+// joinPath joins path segments with '/'.
 func joinPath(segs []string) string {
 	if len(segs) == 0 {
 		return ""
@@ -247,7 +254,7 @@ func joinPath(segs []string) string {
 	return out
 }
 
-// split is a minimal strings.Split replacement to avoid extra imports
+// split is a minimal strings.Split replacement.
 func split(s string, sep byte) []string {
 	var res []string
 	last := 0
