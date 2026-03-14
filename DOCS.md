@@ -202,6 +202,52 @@ Requires `ALPHA_VANTAGE_API_KEY` (free tier: 25 calls/day).
 | GET | `/metrics` | Prometheus metrics |
 | GET | `/swagger/*` | Swagger UI & JSON spec |
 
+### Database Query Endpoints
+
+Expose stored data for dashboards and analytics.
+
+| Method | Path | Params | Description |
+|--------|------|--------|-------------|
+| GET | `/db/sentiment/history/:symbol` | `days=7` | Sentiment analysis history for a symbol |
+| GET | `/db/sentiment/trend/:symbol` | `days=7` | Daily sentiment trend (time_bucket aggregation) |
+| GET | `/db/sentiment/daily/:symbol` | `days=7` | Continuous aggregate daily summary |
+| GET | `/db/requests/recent` | `limit=50` | Recent API request logs |
+| GET | `/db/requests/by-symbol` | `days=7` | Request counts grouped by symbol |
+
+### WebSocket Endpoints
+
+Server-push WebSocket connections for real-time data streaming.
+
+| Path | Topic | Description |
+|------|-------|-------------|
+| `/ws/quotes/:symbol` | `quotes:{symbol}` | Live quote updates (polled every 15s while clients connected) |
+| `/ws/news` | `news` | Real-time news events + heartbeats |
+
+**WebSocket Message Format:**
+```json
+{
+  "type": "quote",
+  "symbol": "AAPL",
+  "data": { "c": 150.25, "d": 1.5, "dp": 1.01 },
+  "timestamp": "2026-02-28T12:00:00Z"
+}
+```
+
+**Connection:** Standard WebSocket upgrade — `ws://localhost:8080/ws/quotes/AAPL`. No authentication required. Ping/pong keepalive every 54 seconds.
+
+### Kafka Event Publishing
+
+When `KAFKA_BROKER` is set, all data-fetching handlers publish events to Kafka topics:
+
+| Topic | Trigger | Description |
+|-------|---------|-------------|
+| `dogonomics.quotes` | `/quote/:symbol` | Stock quote fetched |
+| `dogonomics.news` | `/finnews/*`, `/finnewsBert/*`, `/news/*` | News articles fetched |
+| `dogonomics.sentiment` | `/sentiment/*`, `/finnewsBert/*` | Sentiment analysis completed |
+| `dogonomics.market-data` | `/treasury/*`, `/commodities/*` | Market data fetched |
+
+**Kafka is opt-in.** Start with `docker compose --profile kafka up`. Set `KAFKA_BROKER=kafka:29092` (or `localhost:9092` for local development).
+
 ---
 
 ## FinBERT Inference

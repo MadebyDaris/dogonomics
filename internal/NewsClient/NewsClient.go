@@ -31,6 +31,7 @@ type NewsClient struct {
 	finnhubKey string
 	eodhKey    string
 	alphaKey   string
+	gnewsKey   string
 }
 
 // NewNewsClient creates a new multi-source news client
@@ -39,6 +40,7 @@ func NewNewsClient() *NewsClient {
 		finnhubKey: os.Getenv("FINNHUB_API_KEY"),
 		eodhKey:    os.Getenv("EODHD_API_KEY"),
 		alphaKey:   os.Getenv("ALPHA_VANTAGE_API_KEY"),
+		gnewsKey:   os.Getenv("GNEWS_API_KEY"),
 	}
 }
 
@@ -73,6 +75,20 @@ func (nc *NewsClient) GetGeneralMarketNews(ctx context.Context, category string,
 			if err == nil {
 				mu.Lock()
 				allNews = append(allNews, alphaNews...)
+				mu.Unlock()
+			}
+		}()
+	}
+
+	// Fetch from GNews
+	if nc.gnewsKey != "" {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			gnews, err := nc.fetchGNewsGeneral(ctx, category, limit)
+			if err == nil {
+				mu.Lock()
+				allNews = append(allNews, gnews...)
 				mu.Unlock()
 			}
 		}()
@@ -144,6 +160,20 @@ func (nc *NewsClient) GetNewsBySymbol(ctx context.Context, symbol string, limit 
 		}()
 	}
 
+	// Fetch from GNews by keyword search
+	if nc.gnewsKey != "" {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			gnews, err := nc.fetchGNewsSearch(ctx, symbol, limit)
+			if err == nil {
+				mu.Lock()
+				allNews = append(allNews, gnews...)
+				mu.Unlock()
+			}
+		}()
+	}
+
 	wg.Wait()
 
 	if ctx.Err() != nil {
@@ -199,6 +229,20 @@ func (nc *NewsClient) GetNewsByKeyword(ctx context.Context, keyword string, limi
 				}
 				mu.Lock()
 				allNews = append(allNews, filtered...)
+				mu.Unlock()
+			}
+		}()
+	}
+
+	// GNews - search by keyword
+	if nc.gnewsKey != "" {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			gnews, err := nc.fetchGNewsSearch(ctx, keyword, limit)
+			if err == nil {
+				mu.Lock()
+				allNews = append(allNews, gnews...)
 				mu.Unlock()
 			}
 		}()
@@ -570,4 +614,155 @@ func min(a, b int) int {
 		return a
 	}
 	return b
+}
+
+// ============================================================
+// GNews.io Source
+// ============================================================
+
+// fetchGNewsGeneral fetches top business/finance headlines from GNews.io
+func (nc *NewsClient) fetchGNewsGeneral(ctx context.Context, category string, limit int) ([]NewsArticle, error) {
+	if nc.gnewsKey == "" {
+		return nil, fmt.Errorf("GNews API key not configured")
+	}
+
+	// Map categories to GNews topics
+	topic := "business"
+	switch strings.ToLower(category) {
+	case "technology", "tech":
+		topic = "technology"
+	case "crypto", "cryptocurrency":
+		topic = "technology" // GNews doesn't have a crypto category
+	}
+
+	u, _ := url.Parse("https://gnews.io/api/v4/top-headlines")
+	q := u.Query()
+	q.Set("token", nc.gnewsKey)
+	q.Set("topic", topic)
+	q.Set("lang", "en")
+	q.Set("max", fmt.Sprintf("%d", min(limit, 10)))
+	u.RawQuery = q.Encode()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("GNews API returned status %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var gnewsResp struct {
+		TotalArticles int `json:"totalArticles"`
+		Articles      []struct {
+			Title       string `json:"title"`
+			Description string `json:"description"`
+			Content     string `json:"content"`
+			URL         string `json:"url"`
+			Image       string `json:"image"`
+			PublishedAt string `json:"publishedAt"`
+			Source      struct {
+				Name string `json:"name"`
+				URL  string `json:"url"`
+			} `json:"source"`
+		} `json:"articles"`
+	}
+	if err := json.Unmarshal(body, &gnewsResp); err != nil {
+		return nil, fmt.Errorf("failed to parse GNews response: %v", err)
+	}
+
+	var articles []NewsArticle
+	for _, item := range gnewsResp.Articles {
+		publishedAt, _ := time.Parse(time.RFC3339, item.PublishedAt)
+		articles = append(articles, NewsArticle{
+			Title:       item.Title,
+			Description: item.Description,
+			Content:     item.Content,
+			Source:      fmt.Sprintf("GNews (%s)", item.Source.Name),
+			URL:         item.URL,
+			PublishedAt: publishedAt,
+			ImageURL:    item.Image,
+			Category:    topic,
+		})
+	}
+
+	return articles, nil
+}
+
+// fetchGNewsSearch searches GNews.io for articles matching a query
+func (nc *NewsClient) fetchGNewsSearch(ctx context.Context, query string, limit int) ([]NewsArticle, error) {
+	if nc.gnewsKey == "" {
+		return nil, fmt.Errorf("GNews API key not configured")
+	}
+
+	u, _ := url.Parse("https://gnews.io/api/v4/search")
+	q := u.Query()
+	q.Set("token", nc.gnewsKey)
+	q.Set("q", query)
+	q.Set("lang", "en")
+	q.Set("max", fmt.Sprintf("%d", min(limit, 10)))
+	q.Set("in", "title,description")
+	u.RawQuery = q.Encode()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("GNews search API returned status %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var gnewsResp struct {
+		TotalArticles int `json:"totalArticles"`
+		Articles      []struct {
+			Title       string `json:"title"`
+			Description string `json:"description"`
+			Content     string `json:"content"`
+			URL         string `json:"url"`
+			Image       string `json:"image"`
+			PublishedAt string `json:"publishedAt"`
+			Source      struct {
+				Name string `json:"name"`
+				URL  string `json:"url"`
+			} `json:"source"`
+		} `json:"articles"`
+	}
+	if err := json.Unmarshal(body, &gnewsResp); err != nil {
+		return nil, fmt.Errorf("failed to parse GNews search response: %v", err)
+	}
+
+	var articles []NewsArticle
+	for _, item := range gnewsResp.Articles {
+		publishedAt, _ := time.Parse(time.RFC3339, item.PublishedAt)
+		articles = append(articles, NewsArticle{
+			Title:       item.Title,
+			Description: item.Description,
+			Content:     item.Content,
+			Source:      fmt.Sprintf("GNews (%s)", item.Source.Name),
+			URL:         item.URL,
+			PublishedAt: publishedAt,
+			ImageURL:    item.Image,
+		})
+	}
+
+	return articles, nil
 }

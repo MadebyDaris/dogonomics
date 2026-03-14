@@ -197,6 +197,46 @@ JOIN news_items ni ON sa.news_item_id = ni.id
 ORDER BY sa.analyzed_at DESC;
 
 -- ============================================================
+-- Hypertable: Treasury Data
+-- Stores snapshots of treasury API responses
+-- ============================================================
+CREATE TABLE IF NOT EXISTS treasury_data (
+    id UUID NOT NULL DEFAULT uuid_generate_v4(),
+    data_type VARCHAR(50) NOT NULL,
+    fetched_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    record_count INT,
+    raw_data JSONB NOT NULL
+);
+
+SELECT create_hypertable('treasury_data', 'fetched_at', if_not_exists => TRUE);
+
+CREATE INDEX idx_treasury_data_type ON treasury_data(data_type, fetched_at DESC);
+
+-- Automatic retention: drop chunks older than 90 days
+SELECT add_retention_policy('treasury_data', INTERVAL '90 days', if_not_exists => TRUE);
+
+-- ============================================================
+-- Hypertable: Commodity Data
+-- Stores snapshots of commodity price responses
+-- ============================================================
+CREATE TABLE IF NOT EXISTS commodity_data (
+    id UUID NOT NULL DEFAULT uuid_generate_v4(),
+    commodity_name VARCHAR(100) NOT NULL,
+    unit VARCHAR(50),
+    interval VARCHAR(20),
+    data_points INT,
+    fetched_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    raw_data JSONB NOT NULL
+);
+
+SELECT create_hypertable('commodity_data', 'fetched_at', if_not_exists => TRUE);
+
+CREATE INDEX idx_commodity_data_name ON commodity_data(commodity_name, fetched_at DESC);
+
+-- Automatic retention: drop chunks older than 90 days
+SELECT add_retention_policy('commodity_data', INTERVAL '90 days', if_not_exists => TRUE);
+
+-- ============================================================
 -- Continuous Aggregate: daily sentiment summary
 -- Replaces the plain VIEW for much faster dashboard queries
 -- ============================================================

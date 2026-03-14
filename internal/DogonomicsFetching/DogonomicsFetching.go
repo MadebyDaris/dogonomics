@@ -216,3 +216,98 @@ func (c *Client) BuildStockDetailData(ctx context.Context, symbol string) (*Dogo
 		Logo:                profile.Logo,
 	}, nil
 }
+
+// ============================================================
+// Forex & Crypto
+// ============================================================
+
+// ForexRates represents exchange rates from Finnhub /forex/rates
+type ForexRates struct {
+	Base  string             `json:"base"`
+	Quote map[string]float64 `json:"quote"`
+}
+
+// ForexSymbol represents a forex symbol pair from Finnhub /forex/symbol
+type ForexSymbol struct {
+	Description   string `json:"description"`
+	DisplaySymbol string `json:"displaySymbol"`
+	Symbol        string `json:"symbol"`
+}
+
+// CryptoSymbol represents a crypto symbol from Finnhub /crypto/symbol
+type CryptoSymbol struct {
+	Description   string `json:"description"`
+	DisplaySymbol string `json:"displaySymbol"`
+	Symbol        string `json:"symbol"`
+}
+
+// CryptoCandle represents OHLCV candle data from Finnhub /crypto/candle
+type CryptoCandle struct {
+	Close     []float64 `json:"c"`
+	High      []float64 `json:"h"`
+	Low       []float64 `json:"l"`
+	Open      []float64 `json:"o"`
+	Volume    []float64 `json:"v"`
+	Timestamp []int64   `json:"t"`
+	Status    string    `json:"s"`
+}
+
+// GetForexRates fetches forex exchange rates for the given base currency.
+func (c *Client) GetForexRates(ctx context.Context, base string) (*ForexRates, error) {
+	data, err := c.makeRequest(ctx, "/forex/rates", map[string]string{"base": base})
+	if err != nil {
+		return nil, err
+	}
+	var rates ForexRates
+	if err := json.Unmarshal(data, &rates); err != nil {
+		return nil, fmt.Errorf("failed to parse forex rates: %v", err)
+	}
+	return &rates, nil
+}
+
+// GetForexSymbols lists available forex symbols on the given exchange.
+func (c *Client) GetForexSymbols(ctx context.Context, exchange string) ([]ForexSymbol, error) {
+	data, err := c.makeRequest(ctx, "/forex/symbol", map[string]string{"exchange": exchange})
+	if err != nil {
+		return nil, err
+	}
+	var symbols []ForexSymbol
+	if err := json.Unmarshal(data, &symbols); err != nil {
+		return nil, fmt.Errorf("failed to parse forex symbols: %v", err)
+	}
+	return symbols, nil
+}
+
+// GetCryptoSymbols lists available crypto symbols on the given exchange.
+func (c *Client) GetCryptoSymbols(ctx context.Context, exchange string) ([]CryptoSymbol, error) {
+	data, err := c.makeRequest(ctx, "/crypto/symbol", map[string]string{"exchange": exchange})
+	if err != nil {
+		return nil, err
+	}
+	var symbols []CryptoSymbol
+	if err := json.Unmarshal(data, &symbols); err != nil {
+		return nil, fmt.Errorf("failed to parse crypto symbols: %v", err)
+	}
+	return symbols, nil
+}
+
+// GetCryptoCandle fetches OHLCV candle data for a crypto symbol.
+func (c *Client) GetCryptoCandle(ctx context.Context, symbol, resolution string, from, to int64) (*CryptoCandle, error) {
+	data, err := c.makeRequest(ctx, "/crypto/candle", map[string]string{
+		"symbol":     symbol,
+		"resolution": resolution,
+		"from":       fmt.Sprintf("%d", from),
+		"to":         fmt.Sprintf("%d", to),
+	})
+	if err != nil {
+		return nil, err
+	}
+	var candle CryptoCandle
+	if err := json.Unmarshal(data, &candle); err != nil {
+		return nil, fmt.Errorf("failed to parse crypto candle: %v", err)
+	}
+	if candle.Status == "no_data" {
+		return nil, fmt.Errorf("no data available for symbol %s", symbol)
+	}
+	return &candle, nil
+}
