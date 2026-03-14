@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/MadebyDaris/dogonomics/internal/DogonomicsFetching"
+	"github.com/MadebyDaris/dogonomics/internal/DogonomicsProcessing"
+	"github.com/MadebyDaris/dogonomics/internal/NewsClient"
 	"github.com/MadebyDaris/dogonomics/sentAnalysis"
 	"github.com/google/uuid"
 )
@@ -205,4 +207,155 @@ func GetSymbolSentimentTrend(ctx context.Context, symbol string, days int) ([]ma
 	}
 
 	return results, rows.Err()
+}
+
+// SaveCompanyProfile upserts a company profile into the database
+func SaveCompanyProfile(ctx context.Context, symbol string, profile *DogonomicsProcessing.CompanyProfile) error {
+	if DB == nil {
+		return ErrDatabaseNotConnected
+	}
+
+	rawData, err := json.Marshal(profile)
+	if err != nil {
+		return err
+	}
+
+	query := `
+		INSERT INTO company_profiles (symbol, name, country, currency, exchange, industry, market_cap, logo_url, website_url, raw_data)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		ON CONFLICT (symbol) DO UPDATE SET
+			name = EXCLUDED.name,
+			country = EXCLUDED.country,
+			currency = EXCLUDED.currency,
+			exchange = EXCLUDED.exchange,
+			industry = EXCLUDED.industry,
+			market_cap = EXCLUDED.market_cap,
+			logo_url = EXCLUDED.logo_url,
+			website_url = EXCLUDED.website_url,
+			raw_data = EXCLUDED.raw_data,
+			last_updated = NOW()
+	`
+
+	_, err = DB.Exec(ctx, query,
+		symbol,
+		profile.Name,
+		profile.Country,
+		profile.Currency,
+		profile.Exchange,
+		profile.FinnhubIndustry,
+		int64(profile.MarketCap),
+		profile.Logo,
+		profile.WebURL,
+		rawData,
+	)
+
+	return err
+}
+
+// GetCompanyProfile retrieves a company profile from the database
+func GetCompanyProfile(ctx context.Context, symbol string) (*DogonomicsProcessing.CompanyProfile, error) {
+	if DB == nil {
+		return nil, ErrDatabaseNotConnected
+	}
+
+	query := `SELECT raw_data FROM company_profiles WHERE symbol = $1`
+
+	var rawData []byte
+	err := DB.QueryRow(ctx, query, symbol).Scan(&rawData)
+	if err != nil {
+		return nil, err
+	}
+
+	var profile DogonomicsProcessing.CompanyProfile
+	if err := json.Unmarshal(rawData, &profile); err != nil {
+		return nil, err
+	}
+
+	return &profile, nil
+}
+
+// SaveChartData saves a batch of historical chart data points
+func SaveChartData(ctx context.Context, symbol string, data []DogonomicsProcessing.ChartDataPoint, source string) error {
+	if DB == nil {
+		return ErrDatabaseNotConnected
+	}
+
+	if len(data) == 0 {
+		return nil
+	}
+
+	query := `
+		INSERT INTO chart_data (symbol, date, open_price, high_price, low_price, close_price, volume, source)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		ON CONFLICT (symbol, date, source, fetched_at) DO NOTHING
+	`
+
+	for _, point := range data {
+		_, err := DB.Exec(ctx, query,
+			symbol,
+			point.Timestamp.Format("2006-01-02"),
+			point.Open,
+			point.High,
+			point.Low,
+			point.Close,
+			point.Volume,
+			source,
+		)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// SaveNewsArticle saves a generic news article (from NewsClient) to the database
+func SaveNewsArticle(ctx context.Context, symbol string, article *NewsClient.NewsArticle) error {
+	if DB == nil {
+		return ErrDatabaseNotConnected
+	}
+
+	query := `
+		INSERT INTO news_items (symbol, title, content, published_date, source, link)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		ON CONFLICT (symbol, link, fetched_at) DO NOTHING
+	`
+
+	var content *string
+	if article.Content != "" {
+		content = &article.Content
+	} else if article.Description != "" {
+		content = &article.Description
+	}
+
+	_, err := DB.Exec(ctx, query,
+		symbol,
+		article.Title,
+		content,
+		article.PublishedAt,
+		article.Source,
+		article.URL,
+	)
+
+	return err
+}
+
+// SaveTickerData saves Polygon OHLC ticker data
+func SaveTickerData(ctx context.Context, symbol string, data interface{}) error {
+	if DB == nil {
+		return ErrDatabaseNotConnected
+	}
+
+	rawData, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+
+	query := `
+		INSERT INTO stock_quotes (symbol, source, raw_data)
+		VALUES ($1, $2, $3)
+	`
+
+	_, err = DB.Exec(ctx, query, symbol, "polygon", rawData)
+	return err
 }

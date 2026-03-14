@@ -16,6 +16,8 @@ internal/
   CommoditiesClient/           # Alpha Vantage commodities client
   database/                    # TimescaleDB connection pool, queries, schema
   cache/                       # Redis caching layer
+  ws/                          # WebSocket hub, client, ticker (real-time streaming)
+  events/                      # Kafka producer (event publishing)
   workerpool/                  # Bounded concurrent task execution
 sentAnalysis/                  # EODHD news fetching + FinBERT sentiment pipeline
 BertInference/                 # ONNX Runtime FinBERT model loading & inference
@@ -56,6 +58,7 @@ go run dogonomics.go
 | `DB_NAME`              | No       | Database name (default: dogonomics)  |
 | `REDIS_HOST`           | No       | Redis host (default: localhost)      |
 | `REDIS_PORT`           | No       | Redis port (default: 6379)           |
+| `KAFKA_BROKER`         | No       | Kafka broker address (enables event publishing) |
 
 ## Docker
 
@@ -65,14 +68,24 @@ docker compose up --build
 
 # Include ONNX variant with BERT on port 8081
 docker compose --profile onnx up --build
+
+# Include Kafka + Zookeeper for event publishing
+docker compose --profile kafka up --build
+
+# Everything (ONNX + Kafka)
+docker compose --profile onnx --profile kafka up --build
 ```
 
-Services: API (`:${PORT:-8080}`), TimescaleDB (:5432), Redis (:6379), Prometheus (:9090), Grafana (:3000).
+Services: API (`:${PORT:-8080}`), TimescaleDB (:5432), Redis (:6379), Prometheus (:9090), Grafana (:3000), Kafka (:9092, opt-in).
 
 ## Architecture
 
 - **TimescaleDB** for time-series storage — hypertables, continuous aggregates, automatic retention.
 - **Redis** caching with per-endpoint TTLs (2 min – 1 hr). Graceful degradation if unavailable.
+- **WebSockets** (gorilla/websocket) — server-push real-time quotes and news at `/ws/quotes/:symbol` and `/ws/news`.
+- **Kafka** (segmentio/kafka-go) — event publishing to topics on every data fetch. Opt-in via Docker profile.
+- **Full data persistence** — every handler that fetches external API data persists it to TimescaleDB asynchronously.
+- **Database query endpoints** — `/db/*` routes expose stored sentiment history, trends, and request analytics.
 - **Goroutines + WaitGroup**: API clients fetch data concurrently.
 - **Worker Pool**: `internal/workerpool` for bounded batch BERT inference.
 - **Context Cancellation**: All API calls accept `context.Context` for graceful shutdown.

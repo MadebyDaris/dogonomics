@@ -22,6 +22,9 @@ import (
 	"github.com/MadebyDaris/dogonomics/internal/DogonomicsFetching"
 	"github.com/MadebyDaris/dogonomics/internal/cache"
 	"github.com/MadebyDaris/dogonomics/internal/database"
+	"github.com/MadebyDaris/dogonomics/internal/events"
+	"github.com/MadebyDaris/dogonomics/internal/mcpgateway"
+	"github.com/MadebyDaris/dogonomics/internal/ws"
 	"github.com/MadebyDaris/dogonomics/middleware"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -39,6 +42,14 @@ func main() {
 		fmt.Println("FINNHUB_API_KEY is not set in .env file")
 		fmt.Println("Please set your FINNHUB_API_KEY in the .env file.")
 		return
+	}
+
+	// Initialize Firebase Admin SDK for authentication
+	if err := middleware.InitFirebase(); err != nil {
+		log.Printf("WARNING: Firebase init failed: %v", err)
+		log.Printf("API will continue without authentication (dev mode)")
+	} else {
+		log.Println("Firebase authentication initialized")
 	}
 
 	finnhubClient := DogonomicsFetching.NewClient()
@@ -61,6 +72,29 @@ func main() {
 		log.Printf("API will continue without caching")
 	}
 
+	// Initialize WebSocket hub
+	wsHub := ws.NewHub()
+	go wsHub.Run()
+	controller.SetWSHub(wsHub)
+	log.Println("WebSocket hub started")
+
+	// Initialize Kafka producer (graceful degradation if KAFKA_BROKER not set)
+	kafkaProducer := events.NewProducer()
+	controller.SetKafkaProducer(kafkaProducer)
+
+	var mcpServer *mcpgateway.Server
+	if mcpgateway.EnabledFromEnv() {
+		mcpServer, err = mcpgateway.New(mcpgateway.Dependencies{
+			Finnhub: finnhubClient,
+			Redis:   cache.Client,
+		})
+		if err != nil {
+			log.Printf("WARNING: MCP server init failed: %v", err)
+		} else {
+			mcpServer.Start()
+		}
+	}
+
 	fmt.Println("Initializing BERT model...")
 	modelPath := "./sentAnalysis/DoggoFinBERT.onnx"
 	vocabPath := "./sentAnalysis/finbert/vocab.txt"
@@ -71,6 +105,14 @@ func main() {
 	go func() {
 		<-c
 		fmt.Println("\nShutting down server...")
+		if mcpServer != nil {
+			shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			if err := mcpServer.Shutdown(shutdownCtx); err != nil {
+				log.Printf("WARNING: MCP shutdown failed: %v", err)
+			}
+			cancel()
+		}
+		kafkaProducer.Close()
 		cache.Close()
 		database.Close()
 		BertInference.CleanupBERT()
@@ -110,7 +152,14 @@ func main() {
 	)
 
 	prometheus.MustRegister(httpRequestsTotal, httpRequestDuration)
-	// Middleware
+	// Middleware — order matters:
+	// 1. CORS must be first to handle preflight OPTIONS requests
+	// 2. Rate limiting before auth to block floods early
+	// 3. Auth validates Firebase ID tokens
+	// 4. Database logger & cache are last
+	r.Use(middleware.CORSMiddleware())
+	r.Use(middleware.RateLimitMiddleware())
+	r.Use(middleware.AuthMiddleware())
 	r.Use(middleware.DatabaseLogger())
 	r.Use(middleware.CacheMiddleware(5 * time.Minute))
 
@@ -195,11 +244,73 @@ func main() {
 	r.GET("/commodities/metals", controller.GetCommodityMetals)
 	r.GET("/commodities/agriculture", controller.GetCommodityAgriculture)
 
+	// Financial Indicators & Advice
+	r.GET("/indicators/:symbol", controller.GetFinancialIndicators)
+	r.GET("/advice/:symbol", controller.GetDogonomicsAdvice)
+
+	// Forex
+	r.GET("/forex/rates", controller.GetForexRates)
+	r.GET("/forex/symbols", controller.GetForexSymbols)
+
+	// Crypto
+	r.GET("/crypto/quotes", controller.GetCryptoQuotes)
+	r.GET("/crypto/candle", controller.GetCryptoCandle)
+
+	// Social Sentiment
+	r.GET("/social/sentiment/:symbol", controller.GetSocialSentiment)
+
+	// Database query endpoints
+	r.GET("/db/sentiment/history/:symbol", controller.GetSentimentHistoryHandler)
+	r.GET("/db/sentiment/trend/:symbol", controller.GetSentimentTrendHandler)
+	r.GET("/db/sentiment/daily/:symbol", controller.GetDailySentimentSummaryHandler)
+	r.GET("/db/requests/recent", controller.GetRecentRequestsHandler)
+	r.GET("/db/requests/by-symbol", controller.GetRequestsBySymbolHandler)
+
+	// WebSocket endpoints (token verified via query param)
+	r.GET("/ws/quotes/:symbol", func(c *gin.Context) {
+		token := c.Query("token")
+		if token != "" {
+			if _, err := middleware.VerifyWSToken(token); err != nil {
+				c.JSON(401, gin.H{"error": "Invalid WebSocket token"})
+				return
+			}
+		}
+		symbol := c.Param("symbol")
+		ws.ServeWS(wsHub, "quotes:"+symbol, c.Writer, c.Request)
+	})
+	r.GET("/ws/news", func(c *gin.Context) {
+		token := c.Query("token")
+		if token != "" {
+			if _, err := middleware.VerifyWSToken(token); err != nil {
+				c.JSON(401, gin.H{"error": "Invalid WebSocket token"})
+				return
+			}
+		}
+		ws.ServeWS(wsHub, "news", c.Writer, c.Request)
+	})
+
+	// Start WebSocket quote ticker (polls every 15 seconds for active subscribers)
+	wsCtx, wsCancel := context.WithCancel(context.Background())
+	defer wsCancel()
+	go ws.QuoteTicker(wsCtx, wsHub, finnhubClient, 15*time.Second)
+	go ws.NewsTicker(wsCtx, wsHub, 30*time.Second)
+
 	fmt.Printf("Starting Dogonomics API server on :%s\n", port)
 	fmt.Printf("Swagger UI: http://localhost:%s/swagger/index.html\n", port)
 
-	if err := r.Run(":" + port); err != nil {
-		log.Fatalf("Failed to start server: %v", err)
+	// TLS support: if cert + key files are provided, serve HTTPS
+	certPath := os.Getenv("TLS_CERT_PATH")
+	keyPath := os.Getenv("TLS_KEY_PATH")
+
+	if certPath != "" && keyPath != "" {
+		fmt.Printf("Starting HTTPS server on :%s\n", port)
+		if err := r.RunTLS(":"+port, certPath, keyPath); err != nil {
+			log.Fatalf("Failed to start HTTPS server: %v", err)
+		}
+	} else {
+		if err := r.Run(":" + port); err != nil {
+			log.Fatalf("Failed to start server: %v", err)
+		}
 	}
 }
 
