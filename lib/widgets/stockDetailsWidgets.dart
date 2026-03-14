@@ -1,7 +1,11 @@
 import 'package:fl_chart/fl_chart.dart' show LineChartBarData, FlBorderData, FlTitlesData, FlGridData, LineChartData, LineChart, BarAreaData, FlDotData, FlSpot;
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../backend/dogonomicsApi.dart';
+import '../pages/newsArticleDetail.dart';
+import '../widgets/infoTooltip.dart';
+import '../utils/constant.dart';
 
 // Important Company information
 class CompanyHeader extends StatelessWidget {
@@ -20,11 +24,7 @@ Widget build(BuildContext context) {
       children: [
         Text(
           stockData.companyName,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-          ),
+          style: HEADING_LARGE,
         ),
         const SizedBox(height: 8),
         Row(
@@ -41,21 +41,21 @@ Widget build(BuildContext context) {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: isPositive ? Colors.green.withOpacity(0.2) : Colors.red.withOpacity(0.2),
+                color: (isPositive ? COLOR_POSITIVE : COLOR_NEGATIVE).withOpacity(0.2),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
                 children: [
                   Icon(
                     isPositive ? Icons.trending_up : Icons.trending_down,
-                    color: isPositive ? Colors.green : Colors.red,
+                    color: isPositive ? COLOR_POSITIVE : COLOR_NEGATIVE,
                     size: 16,
                   ),
                   const SizedBox(width: 4),
                   Text(
                     '${isPositive ? '+' : ''}${stockData.changePercentage.toStringAsFixed(2)}%',
                     style: TextStyle(
-                      color: isPositive ? Colors.green : Colors.red,
+                      color: isPositive ? COLOR_POSITIVE : COLOR_NEGATIVE,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -83,14 +83,14 @@ class ChartWidget extends StatelessWidget {
         height: 200,
         margin: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: const Color(0xFF1A2332),
+          color: CARD_BACKGROUND,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey[800]!),
+          border: Border.all(color: BORDER_COLOR),
         ),
-        child: const Center(
+        child: Center(
           child: Text(
             'Chart data not available',
-            style: TextStyle(color: Colors.grey),
+            style: BODY_SECONDARY,
           ),
         ),
       );
@@ -100,35 +100,85 @@ class ChartWidget extends StatelessWidget {
       return FlSpot(entry.key.toDouble(), entry.value.y);
     }).toList();
 
+    // Determine if the trend is positive or negative
+    final isPositive = chartData.last.y >= chartData.first.y;
+
     return Container(
       height: 200,
       margin: const EdgeInsets.all(20),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A2332),
+        color: CARD_BACKGROUND,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[800]!),
+        border: Border.all(color: BORDER_COLOR),
       ),
-      child: LineChart(
-        LineChartData(
-          gridData: FlGridData(show: false),
-          titlesData: FlTitlesData(show: false),
-          borderData: FlBorderData(show: false),
-          lineBarsData: [
-            LineChartBarData(
-              spots: spots,
-              isCurved: true,
-              color: Colors.blue,
-              barWidth: 3,
-              isStrokeCapRound: true,
-              dotData: FlDotData(show: false),
-              belowBarData: BarAreaData(
-                show: true,
-                color: Colors.blue.withOpacity(0.3),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Price Chart',
+                style: HEADING_SMALL,
+              ),
+              Row(
+                children: [
+                  InfoTooltip(
+                    title: 'Price Chart',
+                    message: 'This chart shows the stock\'s price movement over time. Technical analysis involves identifying patterns and trends to predict future price movements. Look for support/resistance levels, trend lines, and chart patterns like head and shoulders or double tops/bottoms.',
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: ACCENT_GREEN.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: const [
+                        Icon(Icons.zoom_in, size: 14, color: ACCENT_GREEN),
+                        SizedBox(width: 4),
+                        Text(
+                          'Tap to expand',
+                          style: TextStyle(
+                            color: ACCENT_GREEN,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: LineChart(
+              LineChartData(
+                gridData: FlGridData(show: false),
+                titlesData: FlTitlesData(show: false),
+                borderData: FlBorderData(show: false),
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: spots,
+                    isCurved: true,
+                    color: isPositive ? COLOR_POSITIVE : COLOR_NEGATIVE,
+                    barWidth: 3,
+                    isStrokeCapRound: true,
+                    dotData: FlDotData(show: false),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      color: (isPositive ? COLOR_POSITIVE : COLOR_NEGATIVE).withOpacity(0.3),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -142,10 +192,26 @@ class KeyMetricsGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final metrics = [
-      {'label': 'Symbol', 'value': stockData.symbol},
-      {'label': 'Exchange', 'value': stockData.exchange},
-      {'label': 'PE Ratio', 'value': stockData.peRatio.toStringAsFixed(2)},
-      {'label': 'EPS', 'value': stockData.eps.toStringAsFixed(2)},
+      {
+        'label': 'Symbol',
+        'value': stockData.symbol,
+        'tooltip': 'The unique ticker symbol used to identify this stock on the exchange.',
+      },
+      {
+        'label': 'Exchange',
+        'value': stockData.exchange,
+        'tooltip': 'The stock exchange where this security is traded (NYSE, NASDAQ, etc.).',
+      },
+      {
+        'label': 'PE Ratio',
+        'value': stockData.peRatio.toStringAsFixed(2),
+        'tooltip': 'Price-to-Earnings Ratio: Shows how much investors are willing to pay per dollar of earnings. A higher P/E might indicate growth expectations, while a lower P/E could suggest undervaluation or slower growth.',
+      },
+      {
+        'label': 'EPS',
+        'value': stockData.eps.toStringAsFixed(2),
+        'tooltip': 'Earnings Per Share: The portion of company\'s profit allocated to each outstanding share. Higher EPS indicates greater profitability. Formula: Net Income / Total Outstanding Shares.',
+      },
     ];
 
     return GridView.builder(
@@ -163,6 +229,7 @@ class KeyMetricsGrid extends StatelessWidget {
         return MetricCard(
           label: metric['label']!,
           value: metric['value']!,
+          tooltip: metric['tooltip']!,
         );
       },
     );
@@ -172,36 +239,59 @@ class KeyMetricsGrid extends StatelessWidget {
 class MetricCard extends StatelessWidget {
   final String label;
   final String value;
+  final String tooltip;
 
-  const MetricCard({Key? key, required this.label, required this.value}) : super(key: key);
+  const MetricCard({
+    Key? key, 
+    required this.label, 
+    required this.value,
+    required this.tooltip,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
-        color: const Color.fromARGB(255, 14, 19, 28),
+        color: CARD_BACKGROUND,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[800]!),
+        border: Border.all(color: BORDER_COLOR),
       ),
-      child: 
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              label,
-              style: TextStyle(
-                color: Colors.grey[400],
-                fontSize: 12,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  label,
+                  style: CAPTION_TEXT,
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
               ),
-            ),
-            Text(
+              SizedBox(
+                width: 24,
+                height: 24,
+                child: InfoTooltip(
+                  title: label,
+                  message: tooltip,
+                ),
+              ),
+            ],
+          ),
+          Flexible(
+            child: Text(
               value,
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
+              ),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 2,
             ),
           ),
         ],
@@ -217,35 +307,208 @@ class CompanyInfo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A2332),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[800]!),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'About',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: CARD_BACKGROUND,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: BORDER_COLOR),
           ),
-          const SizedBox(height: 12),
-          Text(
-            aboutDescription,
-            style: TextStyle(
-              color: Colors.grey[300],
-              fontSize: 14,
-              height: 1.5,
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'About',
+                    style: HEADING_SMALL,
+                  ),
+                  InfoTooltip(
+                    title: 'Company Information',
+                    message: 'Understanding a company\'s business model, products, and market position is crucial for investment decisions. Read about their operations, competitive advantages, and growth strategies.',
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                aboutDescription,
+                style: BODY_SECONDARY.copyWith(height: 1.5),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+        const SizedBox(height: 16),
+        InfoCard(
+          icon: Icons.lightbulb_outline,
+          iconColor: COLOR_WARNING,
+          title: 'Investment Tip: Fundamental Analysis',
+          summary: 'Learn how to evaluate a company beyond the numbers',
+          detailedInfo: '''
+Fundamental analysis involves evaluating a company's intrinsic value by examining:
+
+• Financial Statements: Review balance sheets, income statements, and cash flow statements
+• Management Quality: Research the leadership team's track record and strategy
+• Competitive Position: Analyze market share and competitive advantages
+• Industry Trends: Understand sector dynamics and growth potential
+• Economic Moat: Identify barriers that protect the company from competition
+
+Key metrics to consider:
+- Revenue and earnings growth trends
+- Profit margins and return on equity (ROE)
+- Debt-to-equity ratio for financial health
+- Free cash flow generation
+- Price-to-book (P/B) and price-to-sales (P/S) ratios
+
+Remember: A good company at a fair price is better than a fair company at a good price!
+          ''',
+        ),
+      ],
+    );
+  }
+}
+
+// New Company Profile Card widget
+class CompanyProfileCard extends StatelessWidget {
+  final CompanyProfile profile;
+
+  const CompanyProfileCard({Key? key, required this.profile}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: CARD_BACKGROUND,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: BORDER_COLOR),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Company Header with Logo
+              Row(
+                children: [
+                  if (profile.logo.isNotEmpty)
+                    Container(
+                      width: 60,
+                      height: 60,
+                      margin: const EdgeInsets.only(right: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                        image: DecorationImage(
+                          image: NetworkImage(profile.logo),
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          profile.name,
+                          style: HEADING_SMALL,
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 2,
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Text(
+                              '${profile.symbol} • ${profile.exchange}',
+                              style: CAPTION_TEXT,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              const Divider(color: BORDER_COLOR),
+              const SizedBox(height: 16),
+              
+              // Description
+              Text(
+                'About',
+                style: HEADING_SMALL,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                profile.description.isNotEmpty 
+                  ? profile.description 
+                  : 'No company description available.',
+                style: BODY_SECONDARY.copyWith(height: 1.5),
+              ),
+              
+              // Website
+              if (profile.website.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                InkWell(
+                  onTap: () async {
+                    final uri = Uri.parse(profile.website);
+                    if (await canLaunchUrl(uri)) {
+                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                    }
+                  },
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.language,
+                        size: 16,
+                        color: ACCENT_GREEN,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          profile.website,
+                          style: BODY_SECONDARY.copyWith(
+                            color: ACCENT_GREEN,
+                            decoration: TextDecoration.underline,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        InfoCard(
+          icon: Icons.lightbulb_outline,
+          iconColor: COLOR_WARNING,
+          title: 'Investment Tip: Fundamental Analysis',
+          summary: 'Learn how to evaluate a company beyond the numbers',
+          detailedInfo: '''
+Fundamental analysis involves evaluating a company's intrinsic value by examining:
+
+• Financial Statements: Review balance sheets, income statements, and cash flow statements
+• Management Quality: Research the leadership team's track record and strategy
+• Competitive Position: Analyze market share and competitive advantages
+• Industry Trends: Understand sector dynamics and growth potential
+• Economic Moat: Identify barriers that protect the company from competition
+
+Key metrics to consider:
+- Revenue and earnings growth trends
+- Profit margins and return on equity (ROE)
+- Debt-to-equity ratio for financial health
+- Free cash flow generation
+- Price-to-book (P/B) and price-to-sales (P/S) ratios
+
+Remember: A good company at a fair price is better than a fair company at a good price!
+          ''',
+        ),
+      ],
     );
   }
 }
@@ -260,80 +523,98 @@ class SentimentOverview extends StatelessWidget {
     Color getRecommendationColor() {
       switch (sentimentData.recommendation.toUpperCase()) {
         case 'BUY':
-          return Colors.green;
+          return COLOR_POSITIVE;
         case 'SELL':
-          return Colors.red;
+          return COLOR_NEGATIVE;
         case 'WEAK_BUY':
-          return Colors.green[300]!;
+          return COLOR_POSITIVE.withOpacity(0.7);
         case 'WEAK_SELL':
-          return Colors.red[300]!;
+          return COLOR_NEGATIVE.withOpacity(0.7);
         default:
-          return Colors.orange;
+          return COLOR_WARNING;
       }
     }
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A2332),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[800]!),
-      ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Column(
+      children: [
+        QuickTipBanner(
+          tip: 'Sentiment analysis uses AI to evaluate news articles and predict market sentiment. It\'s one tool among many for making informed decisions.',
+          color: COLOR_INFO,
+        ),
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: CARD_BACKGROUND,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: BORDER_COLOR),
+          ),
+          child: Column(
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'Overall Sentiment',
-                    style: TextStyle(color: Colors.white, fontSize: 16),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            'Overall Sentiment',
+                            style: HEADING_SMALL,
+                          ),
+                          const SizedBox(width: 8),
+                          InfoTooltip(
+                            title: 'Sentiment Analysis',
+                            message: 'Our AI analyzes news articles to gauge market sentiment. A positive sentiment (>0) suggests optimistic news, while negative sentiment (<0) indicates concerns. This is based on natural language processing of recent news articles.',
+                          ),
+                        ],
+                      ),
+                      Text(
+                        '${(sentimentData.overallSentiment * 100).toStringAsFixed(1)}%',
+                        style: TextStyle(
+                          color: sentimentData.overallSentiment >= 0 ? COLOR_POSITIVE : COLOR_NEGATIVE,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
-                  Text(
-                    '${(sentimentData.overallSentiment * 100).toStringAsFixed(1)}%',
-                    style: TextStyle(
-                      color: sentimentData.overallSentiment >= 0 ? Colors.green : Colors.red,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: getRecommendationColor().withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Text(
+                      sentimentData.recommendation.replaceAll('_', ' '),
+                      style: TextStyle(
+                        color: getRecommendationColor(),
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ],
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: getRecommendationColor().withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Text(
-                  sentimentData.recommendation.replaceAll('_', ' '),
-                  style: TextStyle(
-                    color: getRecommendationColor(),
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildSentimentRatio('Positive', sentimentData.positiveRatio, COLOR_POSITIVE),
+                  _buildSentimentRatio('Neutral', sentimentData.neutralRatio, COLOR_WARNING),
+                  _buildSentimentRatio('Negative', sentimentData.negativeRatio, COLOR_NEGATIVE),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Based on ${sentimentData.newsCount} news articles',
+                style: CAPTION_TEXT,
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildSentimentRatio('Positive', sentimentData.positiveRatio, Colors.green),
-              _buildSentimentRatio('Neutral', sentimentData.neutralRatio, Colors.orange),
-              _buildSentimentRatio('Negative', sentimentData.negativeRatio, Colors.red),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Based on ${sentimentData.newsCount} news articles',
-            style: TextStyle(color: Colors.grey[400], fontSize: 12),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -350,10 +631,7 @@ class SentimentOverview extends StatelessWidget {
         ),
         Text(
           label,
-          style: TextStyle(
-            color: Colors.grey[400],
-            fontSize: 12,
-          ),
+          style: CAPTION_TEXT,
         ),
       ],
     );
@@ -395,11 +673,11 @@ class NewsCard extends StatelessWidget {
   Color _getSentimentColor() {
     switch (newsItem.bertSentiment.label.toLowerCase()) {
       case 'positive':
-        return Colors.green;
+        return COLOR_POSITIVE;
       case 'negative':
-        return Colors.red;
+        return COLOR_NEGATIVE;
       default:
-        return Colors.grey;
+        return TEXT_DISABLED;
     }
   }
 
@@ -407,67 +685,110 @@ class NewsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final sentimentColor = _getSentimentColor();
     
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A2332),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[800]!),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  newsItem.title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => NewsArticleDetailPage(newsItem: newsItem),
+          ),
+        );
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: CARD_BACKGROUND,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: BORDER_COLOR),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    newsItem.title,
+                    style: BODY_PRIMARY.copyWith(fontWeight: FontWeight.w500),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 2,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: sentimentColor.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    newsItem.bertSentiment.label.toUpperCase(),
+                    style: TextStyle(
+                      color: sentimentColor,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.article_outlined,
+                      size: 14,
+                      color: TEXT_SECONDARY,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      newsItem.date,
+                      style: CAPTION_TEXT,
+                    ),
+                  ],
+                ),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.analytics_outlined,
+                      size: 14,
+                      color: TEXT_SECONDARY,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${(newsItem.bertSentiment.confidence * 100).toStringAsFixed(1)}% confident',
+                      style: CAPTION_TEXT,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Text(
+                  'Read more',
+                  style: BODY_SECONDARY.copyWith(
+                    color: ACCENT_GREEN,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: sentimentColor.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(12),
+                const SizedBox(width: 4),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 12,
+                  color: ACCENT_GREEN,
                 ),
-                child: Text(
-                  newsItem.bertSentiment.label.toUpperCase(),
-                  style: TextStyle(
-                    color: sentimentColor,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                newsItem.date,
-                style: TextStyle(
-                  color: Colors.grey[400],
-                  fontSize: 12,
-                ),
-              ),
-              Text(
-                'Confidence: ${(newsItem.bertSentiment.confidence * 100).toStringAsFixed(1)}%',
-                style: TextStyle(
-                  color: Colors.grey[400],
-                  fontSize: 12,
-                ),
-              ),
-            ],
-          ),
-        ],
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -481,11 +802,7 @@ class SectionTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       title,
-      style: const TextStyle(
-        color: Colors.white,
-        fontSize: 18,
-        fontWeight: FontWeight.bold,
-      ),
+      style: HEADING_MEDIUM,
     );
   }
 }

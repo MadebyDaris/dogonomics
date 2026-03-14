@@ -1,8 +1,6 @@
-import 'package:Dogonomics/backend/dogonomicsApi.dart';
-import 'package:Dogonomics/backend/stockHandler.dart';
-import 'package:Dogonomics/pages/stockview.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:Dogonomics/backend/api_client.dart';
+import 'package:Dogonomics/backend/dogonomicsApi.dart';
 
 class Stock {
   final String symbol;
@@ -93,15 +91,11 @@ class LiveQuote {
 }
 
 Future<LiveQuote?> fetchLiveQuote(String symbol) async {
-  final url = Uri.parse('http://192.168.1.148:8080/quote/$symbol');
   try {
-    final response = await http.get(url);
-
+    final response = await ApiClient.get('/quote/$symbol');
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
       return LiveQuote.fromJson(data);
-    } else {
-      print('Error: ${response.statusCode}');
     }
   } catch (e) {
     print('Failed to fetch quote: $e');

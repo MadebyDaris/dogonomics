@@ -5,8 +5,9 @@ flutter_launcher_icons:
   android: 
     generate: true
     image_path_android: "assets/images/DogonomicsLogo2.png"
-    adaptive_icon_background: "#00000"
-    adaptive_icon_size: 48
+    adaptive_icon_background: "#000000"  # Pure black background
+    adaptive_icon_foreground: "assets/images/DogonomicsLogo2.png"
+    adaptive_icon_size: 108  # Recommended size for adaptive icons
 
   # image_path_android: "assets/icon/icon.png"
   min_sdk_android: 21 # android min sdk min:16, default 21
@@ -18,10 +19,10 @@ flutter_launcher_icons:
   ios: true
   # image_path_ios: "assets/icon/icon.png"
   remove_alpha_ios: true
+  background_color_ios: "#000000"  # Black background for iOS
   # image_path_ios_dark_transparent: "assets/icon/icon_dark.png"
   # image_path_ios_tinted_grayscale: "assets/icon/icon_tinted.png"
   # desaturate_tinted_to_grayscale_ios: true
-  # background_color_ios: "#ffffff"
 
   # web:
   #   generate: true

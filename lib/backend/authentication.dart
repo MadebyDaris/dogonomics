@@ -1,9 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:Dogonomics/backend/stockHandler.dart';
-import 'package:Dogonomics/backend/user.dart';
-import 'package:Dogonomics/pages/frontpage.dart';
 import 'package:Dogonomics/pages/landingpage.dart';
-import 'package:Dogonomics/pages/stockview.dart';
 import 'package:Dogonomics/utils/tickerData.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -20,7 +16,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _usernameController = TextEditingController();
 
   bool _isLoginMode = true;
-  bool _isLoading = false;
 
 
   Future<void> _login() async {
@@ -42,19 +37,11 @@ class _LoginScreenState extends State<LoginScreen> {
           final userData = userDoc.data()!;
           final username = userData['username'] ?? '';
 
-
-        final List<Stock> portfolio = await _loadPortfolioFromFirestore(userData['portfolio'] ?? []);
-
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('userId', user.uid);
         await prefs.setString('userEmail', user.email ?? '');
         await prefs.setString('username', username);
-        final myuser = AppUser.fromMap({
-          'id': user.uid,
-          'name': username,
-          'email': user.email,
-          'portfolio': portfolio,
-        });
+        
         Navigator.pushReplacement(context, 
           MaterialPageRoute(builder: (_) => 
             DogonomicsLandingPage(onContinueToPortfolio: null, userId: user.uid,
@@ -64,10 +51,6 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       print('Login failed: $e');
       _showErrorDialog('Login failed: ${e.toString()}');
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
     }
   }
 
@@ -96,70 +79,29 @@ class _LoginScreenState extends State<LoginScreen> {
         await prefs.setString('userEmail', user.email ?? '');
         await prefs.setString('username', username);
 
-        final myuser = AppUser.fromMap({
-          'id': user.uid,
-          'name': username,
-          'email': user.email,
-          'portfolio': [],
-        });
       Navigator.pushReplacement(context, 
-        MaterialPageRoute(builder: (_) => DogonomicsLandingPage(onContinueToPortfolio: () {
-          Navigator.pushReplacement(
-            context, 
-            MaterialPageRoute( 
-              builder: (_) => MyHomePage(title: "DOGONOMICS", user: myuser)
-            )
-          );
-        }
+        MaterialPageRoute(builder: (_) => DogonomicsLandingPage(
+          userId: user.uid,
         )));
       }
     } catch (e) {
       print('Signup failed: $e');
       _showErrorDialog('Signup failed: ${e.toString()}');
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
     }
   }
   
-  Future<List<Stock>> _loadPortfolioFromFirestore(List<dynamic> portfolioData) async {
-    List<Stock> stocks = [];
-    
-    for (var stockData in portfolioData) {
-      try {
-        if (stockData is Map<String, dynamic>) {
-          // If we have complete stock data stored
-          stocks.add(Stock.fromMap(stockData));
-        } else if (stockData is String) {
-          // If we only have symbols stored, fetch current data
-          final stock = await fetchSingleStock(
-            symbol: stockData,
-            name: 'Loading...',
-            code: 'ETF',
-          );
-          if (stock != null) {
-            stocks.add(stock);
-          }
-        }
-      } catch (e) {
-        print('Error loading stock data: $e');
-      }
-    }
-    
-    return stocks;
-  }
-
   void _showErrorDialog(String message) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Error'),
-        content: Text(message),
+        title: const Text('Error'),
+        content: SingleChildScrollView(
+          child: Text(message),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('OK'),
+            child: const Text('OK'),
           ),
         ],
       ),
@@ -169,43 +111,47 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Padding(
-        padding: EdgeInsetsGeometry.all(16.0),
-        child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(_isLoginMode ? "Login" : "Sign Up", style: TextStyle(fontSize: 24, fontStyle: FontStyle.italic)),
-              Text(_isLoginMode ? "Time to study some \nDogonomics!" : "Dog catch bones, you catch bonds, \nsame thing no?!", style: TextStyle(fontSize: 12)),
-              SizedBox(height: 20),
-              if (!_isLoginMode)
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const SizedBox(height: 40),
+                Text(_isLoginMode ? "Login" : "Sign Up", style: const TextStyle(fontSize: 24, fontStyle: FontStyle.italic)),
+                Text(_isLoginMode ? "Time to study some \nDogonomics!" : "Dog catch bones, you catch bonds, \nsame thing no?!", style: const TextStyle(fontSize: 12)),
+                const SizedBox(height: 20),
+                if (!_isLoginMode)
+                  TextField(
+                    controller: _usernameController,
+                    decoration: const InputDecoration(labelText: "Username"),
+                  ),
+                TextField(
+                  controller: _emailController, 
+                  decoration: const InputDecoration(labelText: "Email")),
+                TextField(
+                  controller: _passwordController, 
+                  decoration: const InputDecoration(labelText: "Password"), 
+                  obscureText: true),
 
-              TextField(
-                controller: _usernameController,
-                decoration: InputDecoration(labelText: "Username"),
+                const SizedBox(height: 20),
+
+                ElevatedButton(
+                  onPressed: _isLoginMode ? _login : _signup,
+                  child: Text(_isLoginMode ? 'Login' : 'Sign Up'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      _isLoginMode = !_isLoginMode;
+                    });},
+                  child: Text(_isLoginMode
+                      ? "Don't have an account? Sign Up"
+                      : "Already have an account? Login"),
               ),
-              TextField(
-                controller: _emailController, 
-                decoration: InputDecoration(labelText: "Email")),
-              TextField(
-                controller: _passwordController, 
-                decoration: InputDecoration(labelText: "Password"), obscureText: true),
-
-              SizedBox(height: 20),
-
-              ElevatedButton(
-                onPressed: _isLoginMode ? _login : _signup,
-                child: Text(_isLoginMode ? 'Login' : 'Sign Up'),
-              ),
-              TextButton(
-                onPressed: () {
-                  setState(() {
-                    _isLoginMode = !_isLoginMode;
-                  });},
-                child: Text(_isLoginMode
-                    ? "Don't have an account? Sign Up"
-                    : "Already have an account? Login"),
-            ),
-          ],
+              const SizedBox(height: 40),
+            ],
+          ),
         ),
       )
     );
@@ -245,6 +191,18 @@ class PortfolioService {
         await _firestore.collection('users').doc(userId).update({
           'portfolio': currentPortfolio.map((s) => s.toMap()).toList()
         });
+
+        // Record the buy transaction
+        await _firestore.collection('users').doc(userId).collection('transactions').add({
+          'symbol': stock.symbol,
+          'name': stock.name,
+          'type': 'Buy',
+          'assetType': 'stock',
+          'quantity': stock.quantity.toDouble(),
+          'pricePerUnit': stock.price,
+          'total': stock.price * stock.quantity,
+          'timestamp': FieldValue.serverTimestamp(),
+        });
       }
       return true;
     } catch (e) {
@@ -283,6 +241,18 @@ class PortfolioService {
           
           await _firestore.collection('users').doc(userId).update({
             'portfolio': currentPortfolio.map((s) => s.toMap()).toList()
+          });
+
+          // Record the sell transaction
+          await _firestore.collection('users').doc(userId).collection('transactions').add({
+            'symbol': stock.symbol,
+            'name': stock.name,
+            'type': 'Sell',
+            'assetType': 'stock',
+            'quantity': removeQty.toDouble(),
+            'pricePerUnit': stock.price,
+            'total': stock.price * removeQty,
+            'timestamp': FieldValue.serverTimestamp(),
           });
         }
       }

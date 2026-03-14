@@ -57,7 +57,11 @@ class AppUser {
     };
   }
   String getUserId() {
-    return FirebaseAuth.instance.currentUser!.uid;
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      throw StateError('No authenticated user. Please sign in first.');
+    }
+    return user.uid;
   }
 
 

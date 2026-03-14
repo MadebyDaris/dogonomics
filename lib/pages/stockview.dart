@@ -1,17 +1,19 @@
-import 'dart:io';
-
 import 'package:Dogonomics/backend/authentication.dart';
 import 'package:Dogonomics/backend/stockHandler.dart';
 import 'package:Dogonomics/pages/marketIndicPage.dart';
+import 'package:Dogonomics/pages/newsFeedPage.dart';
+import 'package:Dogonomics/pages/portfolioAnalysisPage.dart';
+import 'package:Dogonomics/pages/socialSentimentPage.dart';
+import 'package:Dogonomics/pages/dogonomicsAdvicePage.dart';
+import 'package:Dogonomics/pages/transactionHistoryPage.dart';
 import 'package:Dogonomics/utils/constant.dart';
 import 'package:Dogonomics/utils/logoManager.dart';
 import 'package:Dogonomics/utils/stockDialog.dart';
 import 'package:Dogonomics/utils/tickerData.dart';
+import 'package:Dogonomics/widgets/infoTooltip.dart';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 
 
 class StockViewTab extends StatefulWidget {
@@ -92,62 +94,100 @@ class _StockViewTabState extends State<StockViewTab> {
     bool isPositiveChange = _totalDayChange >= 0;
     double changePercentage = _totalPortfolioValue > 0 ? (_totalDayChange / _totalPortfolioValue) * 100 : 0;
     
-    return Container(
-      padding: EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [ACCENT_COLOR_BRIGHT, ACCENT_COLOR],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => PortfolioAnalysisPage(
+              portfolio: _stocks,
+              totalValue: _totalPortfolioValue,
+              totalDayChange: _totalDayChange,
+            ),
+          ),
+        );
+      },
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [ACCENT_COLOR_BRIGHT, ACCENT_COLOR],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: ACCENT_SHADOW,
+              blurRadius: 10,
+              offset: Offset(0, 4),
+            ),
+          ],
         ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: ACCENT_SHADOW,
-            blurRadius: 10,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Portfolio Value',
-            style: TextStyle(
-              color: MAINGREY,
-              fontSize: 16,
-            ),
-          ),
-          SizedBox(height: 8),
-          Text(
-            '\$${_totalPortfolioValue.toStringAsFixed(2)}',
-            style: TextStyle(
-              color: MAINGREY,
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          SizedBox(height: 8),
-          Row(
-            children: [
-              Icon(
-                isPositiveChange ? Icons.trending_up : Icons.trending_down,
-                color: isPositiveChange ? const Color.fromARGB(255, 32, 83, 33) : Colors.redAccent,
-                size: 20,
-              ),
-              SizedBox(width: 4),
-              Text(
-                '${isPositiveChange ? '+' : ''}\$${_totalDayChange.toStringAsFixed(2)} (${changePercentage.toStringAsFixed(2)}%)',
-                style: TextStyle(
-                  color: isPositiveChange ? const Color.fromARGB(255, 32, 83, 33) : Colors.redAccent,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Portfolio Value',
+                  style: TextStyle(
+                    color: MAINGREY,
+                    fontSize: 16,
+                  ),
                 ),
+                Row(
+                  children: [
+                    Text(
+                      'View Analysis',
+                      style: TextStyle(
+                        color: MAINGREY,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(width: 4),
+                    Icon(
+                      Icons.arrow_forward_ios,
+                      color: MAINGREY,
+                      size: 12,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            SizedBox(height: 8),
+            Text(
+              '\$${_totalPortfolioValue.toStringAsFixed(2)}',
+              style: TextStyle(
+                color: MAINGREY,
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
               ),
-            ],
-          ),
-        ],
+            ),
+            SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(
+                  isPositiveChange ? Icons.trending_up : Icons.trending_down,
+                  color: isPositiveChange ? const Color.fromARGB(255, 32, 83, 33) : Colors.redAccent,
+                  size: 20,
+                ),
+                SizedBox(width: 4),
+                Text(
+                  '${isPositiveChange ? '+' : ''}\$${_totalDayChange.toStringAsFixed(2)} (${changePercentage.toStringAsFixed(2)}%)',
+                  style: TextStyle(
+                    color: isPositiveChange ? const Color.fromARGB(255, 32, 83, 33) : Colors.redAccent,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -159,36 +199,63 @@ class _StockViewTabState extends State<StockViewTab> {
       runSpacing: 16.0,
       children: [
         _buildQuickActionButton(
-          icon: Icons.analytics,
-          label: 'Analytics',
-          onPressed: () {
-            // Navigate to analytics page
-            print('Navigate to Analytics');
-          },
-        ),
-        _buildQuickActionButton(
-          icon: Icons.notifications,
-          label: 'Alerts',
-          onPressed: () {
-            // Navigate to alerts page
-            print('Navigate to Alerts');
-          },
-        ),
-        _buildQuickActionButton(
-          icon: Icons.account_balance_wallet,
-          label: 'Wallet',
-          onPressed: () {
-            // Navigate to wallet page
-            print('Navigate to Wallet');
-          },
-        ),
-        _buildQuickActionButton(
           icon: Icons.history,
           label: 'History',
           onPressed: () {
-            // Navigate to transaction history
-            print('Navigate to History');
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => TransactionHistoryPage(
+                  portfolio: _stocks,
+                ),
+              ),
+            );
           },
+        ),
+        _buildQuickActionButton(
+          icon: Icons.article_outlined,
+          label: 'Financial News',
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const NewsFeedPage(),
+              ),
+            );
+          },
+        ),
+        _buildQuickActionButton(
+          icon: Icons.chat_bubble_outline,
+          label: 'Social Sentiment',
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const SocialSentimentPage(),
+              ),
+            );
+          },
+        ),
+        _buildQuickActionButton(
+          icon: Icons.analytics_outlined,
+          label: 'Portfolio Analysis',
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => PortfolioAnalysisPage(
+                  portfolio: _stocks,
+                  totalValue: _totalPortfolioValue,
+                  totalDayChange: _totalDayChange,
+                ),
+              ),
+            );
+          },
+        ),
+        _buildQuickActionButton(
+          icon: Icons.lightbulb_outline,
+          label: 'Dogonomics Advice',
+          onPressed: () => _showAdviceSymbolPicker(),
         ),
       ],
     );
@@ -286,6 +353,21 @@ class _StockViewTabState extends State<StockViewTab> {
     );
   }
 
+  Widget _buildEducationalTipsSection() {
+    return InfoCard(
+      title: 'Portfolio Tip',
+      summary: 'Diversification is key to managing risk. Consider spreading investments across different sectors.',
+      detailedInfo: 'A well-diversified portfolio typically includes:\n\n'
+          '• Stocks from various sectors (tech, healthcare, finance, etc.)\n'
+          '• Bonds for stability\n'
+          '• Commodities as an inflation hedge\n'
+          '• International exposure\n\n'
+          'This helps reduce risk because different assets often perform differently under the same market conditions.',
+      icon: Icons.school,
+      iconColor: COLOR_WARNING,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListView(
@@ -295,6 +377,10 @@ class _StockViewTabState extends State<StockViewTab> {
         SizedBox(height: 16),
         
         _buildQuickActionsRow(),
+        SizedBox(height: 16),
+
+        // Educational Tips Section
+        _buildEducationalTipsSection(),
         SizedBox(height: 16),
 
         if (_stocks.isEmpty)
@@ -415,6 +501,66 @@ class _StockViewTabState extends State<StockViewTab> {
         backgroundColor: Colors.red,
       ),
     );
+  }
+
+  void _showAdviceSymbolPicker() {
+    if (_stocks.isNotEmpty) {
+      // If user has stocks, show picker from their portfolio
+      showDialog(
+        context: context,
+        builder: (context) => SimpleDialog(
+          backgroundColor: STOCK_CARD,
+          title: const Text(
+            'Choose a stock for Dogonomics Advice',
+            style: TextStyle(color: Colors.white, fontSize: 16),
+          ),
+          children: [
+            ..._stocks.map((stock) => SimpleDialogOption(
+              onPressed: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => DogonomicsAdvicePage(symbol: stock.symbol),
+                  ),
+                );
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  children: [
+                    Text(
+                      stock.symbol,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        stock.name,
+                        style: TextStyle(color: Colors.grey[400], fontSize: 13),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )),
+          ],
+        ),
+      );
+    } else {
+      // Fallback: go directly to a default symbol
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const DogonomicsAdvicePage(symbol: 'AAPL'),
+        ),
+      );
+    }
   }
 }
 

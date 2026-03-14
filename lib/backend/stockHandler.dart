@@ -1,8 +1,6 @@
 import 'package:Dogonomics/backend/dogonomicsApi.dart';
 import 'package:flutter/material.dart';
 import 'package:Dogonomics/utils/constant.dart';
-import 'package:Dogonomics/utils/logoManager.dart';
-import 'dart:io';
 
 import '../pages/stockDetails.dart';
 import '../utils/tickerData.dart';
