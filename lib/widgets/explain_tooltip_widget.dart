@@ -85,7 +85,7 @@ class _ExplainTooltipWidgetState extends State<ExplainTooltipWidget> {
     return GestureDetector(
       onTap: _showExplanationModal,
       child: Tooltip(
-        message: 'Learn more about ${widget.metricName}',
+        message: 'Explain This',
         child: Container(
           padding: EdgeInsets.all(4),
           decoration: BoxDecoration(
@@ -93,7 +93,7 @@ class _ExplainTooltipWidgetState extends State<ExplainTooltipWidget> {
             color: (widget.iconColor ?? const Color(0xFF66BB6A)).withOpacity(0.1),
           ),
           child: Icon(
-            Icons.info_outline,
+            Icons.auto_awesome,
             size: widget.iconSize,
             color: widget.iconColor ?? const Color(0xFF66BB6A),
           ),
@@ -141,10 +141,10 @@ class _ExplainTooltipWidgetState extends State<ExplainTooltipWidget> {
                       ],
                     ),
                   ),
-                  // Dogonomics logo watermark
+                  // Subtle brand watermark
                   Opacity(
                     opacity: 0.1,
-                    child: Text('🐕', style: TextStyle(fontSize: 48)),
+                    child: Text('DOGONOMICS', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   ),
                 ],
               ),

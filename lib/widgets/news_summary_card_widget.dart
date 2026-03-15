@@ -84,7 +84,7 @@ class _NewsSummaryCardWidgetState extends State<NewsSummaryCardWidget>
                 // Dogonomics logo watermark
                 Opacity(
                   opacity: 0.05,
-                  child: Text('🐕', style: TextStyle(fontSize: 32)),
+                  child: Icon(Icons.newspaper_outlined, size: 32, color: Colors.white),
                 ),
                 SizedBox(width: 8),
                 Expanded(

@@ -34,11 +34,8 @@ class ChatMessageBubble extends StatelessWidget {
                 shape: BoxShape.circle,
                 color: const Color(0xFF2E7D32),
               ),
-              child: Center(
-                child: Text(
-                  '🐕',
-                  style: TextStyle(fontSize: 16),
-                ),
+              child: const Center(
+                child: Icon(Icons.smart_toy_outlined, size: 16, color: Colors.white),
               ),
             ),
             SizedBox(width: 8),

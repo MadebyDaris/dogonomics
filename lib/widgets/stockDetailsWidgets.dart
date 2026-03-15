@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../backend/dogonomicsApi.dart';
 import '../pages/newsArticleDetail.dart';
 import '../widgets/infoTooltip.dart';
+import '../widgets/explain_tooltip_widget.dart';
 import '../utils/constant.dart';
 
 // Important Company information
@@ -121,6 +122,12 @@ class ChartWidget extends StatelessWidget {
               Text(
                 'Price Chart',
                 style: HEADING_SMALL,
+              ),
+              const SizedBox(width: 6),
+              ExplainTooltipWidget(
+                metricName: 'Price Chart',
+                metricValue: 'Trend overview',
+                iconSize: 13,
               ),
               Row(
                 children: [
@@ -272,13 +279,20 @@ class MetricCard extends StatelessWidget {
                   maxLines: 1,
                 ),
               ),
-              SizedBox(
-                width: 24,
-                height: 24,
-                child: InfoTooltip(
-                  title: label,
-                  message: tooltip,
-                ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  InfoTooltip(
+                    title: label,
+                    message: tooltip,
+                  ),
+                  const SizedBox(width: 4),
+                  ExplainTooltipWidget(
+                    metricName: label,
+                    metricValue: value,
+                    iconSize: 12,
+                  ),
+                ],
               ),
             ],
           ),

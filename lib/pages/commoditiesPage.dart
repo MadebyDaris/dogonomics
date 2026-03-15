@@ -167,11 +167,13 @@ class _CommoditiesPageState extends State<CommoditiesPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(color: Colors.blue),
-            SizedBox(height: 16),
+            Icon(Icons.oil_barrel_outlined, size: 48, color: COLOR_COMMODITIES),
+            SizedBox(height: 12),
+            CircularProgressIndicator(color: COLOR_COMMODITIES),
+            SizedBox(height: 14),
             Text(
-              'Loading commodity data...',
-              style: TextStyle(color: Colors.grey),
+              'Loading commodity prices...',
+              style: TextStyle(color: Color(0xFF9E9E9E), fontSize: 13, fontWeight: FontWeight.w500),
             ),
           ],
         ),
@@ -183,11 +185,11 @@ class _CommoditiesPageState extends State<CommoditiesPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error, color: Colors.red, size: 64),
-            const SizedBox(height: 16),
+            const Icon(Icons.error_outline, size: 48, color: COLOR_NEGATIVE),
+            const SizedBox(height: 12),
             const Text(
-              'Failed to load commodity data',
-              style: TextStyle(color: Colors.white, fontSize: 18),
+              'Unable to load commodity data',
+              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Padding(
@@ -200,8 +202,9 @@ class _CommoditiesPageState extends State<CommoditiesPage> {
             ),
             const SizedBox(height: 16),
             ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: COLOR_COMMODITIES),
               onPressed: _loadCommodityData,
-              child: const Text('Retry'),
+              child: const Text('Try Again'),
             ),
           ],
         ),
@@ -210,9 +213,15 @@ class _CommoditiesPageState extends State<CommoditiesPage> {
 
     if (commodityData == null) {
       return const Center(
-        child: Text(
-          'No data available',
-          style: TextStyle(color: Colors.grey),
+        child: Column(
+          children: [
+            Icon(Icons.info_outline, size: 48, color: TEXT_SECONDARY),
+            SizedBox(height: 12),
+            Text(
+              'No commodity data available',
+              style: TextStyle(color: Colors.grey, fontSize: 15),
+            ),
+          ],
         ),
       );
     }

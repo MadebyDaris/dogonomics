@@ -161,3 +161,75 @@ Color getChangeColor(double change) {
 String formatChangeText(double change) {
   return change >= 0 ? '+${change.toStringAsFixed(2)}%' : '${change.toStringAsFixed(2)}%';
 }
+
+// ============================================================================
+// DOG / ASSISTANT THEME SYSTEM
+// ============================================================================
+
+/// Glow shadow list for dog-assistant emphasis surfaces.
+List<BoxShadow> glowBoxShadow({Color color = ACCENT_GREEN_BRIGHT, double intensity = 0.2}) {
+  return [
+    BoxShadow(
+      color: color.withOpacity(intensity),
+      blurRadius: 16,
+      spreadRadius: 2,
+    ),
+  ];
+}
+
+/// Card with subtle assistant glow — used for Doggo callout banners.
+BoxDecoration assistantCardDecoration({Color? glowColor}) {
+  return BoxDecoration(
+    color: CARD_BACKGROUND,
+    borderRadius: BorderRadius.circular(12),
+    border: Border.all(color: const Color(0xFF2E7D32).withOpacity(0.5)),
+    boxShadow: [
+      BoxShadow(
+        color: (glowColor ?? ACCENT_GREEN_BRIGHT).withOpacity(0.10),
+        blurRadius: 14,
+        spreadRadius: 1,
+      ),
+    ],
+  );
+}
+
+/// Gradient decoration for AI action buttons.
+BoxDecoration sniffButtonDecoration() {
+  return BoxDecoration(
+    gradient: const LinearGradient(
+      colors: [Color(0xFF2E7D32), Color(0xFF4CAF50)],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    ),
+    borderRadius: BorderRadius.circular(12),
+    boxShadow: [
+      BoxShadow(
+        color: const Color(0xFF4CAF50).withOpacity(0.30),
+        blurRadius: 10,
+        offset: const Offset(0, 4),
+      ),
+    ],
+  );
+}
+
+/// Small label text style for dog-assistant / sniff action tags.
+const TextStyle SNIFF_LABEL = TextStyle(
+  color: ACCENT_GREEN_LIGHT,
+  fontSize: 11,
+  fontWeight: FontWeight.bold,
+  letterSpacing: 0.5,
+);
+
+/// Accent left-border card — used for sentiment article cards in news feed.
+BoxDecoration sentimentBorderCardDecoration({required Color accentColor}) {
+  return BoxDecoration(
+    color: CARD_BACKGROUND,
+    borderRadius: BorderRadius.circular(12),
+    border: Border(
+      left: BorderSide(color: accentColor, width: 3),
+      top: BorderSide(color: BORDER_COLOR),
+      right: BorderSide(color: BORDER_COLOR),
+      bottom: BorderSide(color: BORDER_COLOR),
+    ),
+  );
+}

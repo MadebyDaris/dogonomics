@@ -5,9 +5,11 @@ import 'package:Dogonomics/pages/treasuriesPage.dart';
 import 'package:Dogonomics/pages/forexCryptoPage.dart';
 import 'package:Dogonomics/pages/walletPage.dart';
 import 'package:Dogonomics/pages/newsFeedPage.dart';
+import 'package:Dogonomics/backend/providers.dart';
 import 'package:Dogonomics/utils/constant.dart';
 import 'package:Dogonomics/utils/tickerData.dart';
 import 'package:Dogonomics/utils/walletData.dart';
+import 'package:Dogonomics/widgets/copilot_sidebar_widget.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -26,15 +28,38 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final RouteProvider _routeProvider = RouteProvider();
+  final MetricExplanationProvider _explanationProvider = MetricExplanationProvider();
 
   final tabs = ['Stocks', 'News', 'Commodities', 'Treasuries', 'Forex/Crypto'];
+
+  String _routeForTabIndex(int index) {
+    switch (index) {
+      case 0:
+        return '/frontpage';
+      case 1:
+        return '/news_feed';
+      case 2:
+        return '/commodities';
+      case 3:
+        return '/treasuries';
+      case 4:
+        return '/forex_crypto';
+      default:
+        return '/frontpage';
+    }
+  }
+
+  void _syncRouteContext() {
+    _routeProvider.setRoute(_routeForTabIndex(_tabController.index));
+  }
 
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: PreferredSize(
-      preferredSize: const Size.fromHeight(140.0), // here the desired height
+      preferredSize: const Size.fromHeight(148.0),
       child: AppBar(
         backgroundColor: MAINGREY,
         title: Container(
@@ -50,10 +75,30 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
                 height: 90,
               ),
               const Flexible(
-                child: Text('DOGONOMICS! \n ASSISTANT', 
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, fontFamily: 'Liberation Sans'),
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 2,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'DOGONOMICS',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Liberation Sans',
+                        letterSpacing: 1.5,
+                        color: Colors.white,
+                      ),
+                    ),
+                    Text(
+                      'ASSISTANT',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w400,
+                        color: Color(0xFF66BB6A),
+                        letterSpacing: 2.0,
+                      ),
+                    ),
+                  ],
                 ),
               )
         ])),
@@ -71,37 +116,74 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
         ],
       bottom: TabBar(
         dividerHeight: 0,
-          controller: _tabController,
-          isScrollable: true,
-          indicatorColor: Colors.white,
-          tabs: tabs.map((t) => Tab(text: t)).toList(),
-          ),
+        controller: _tabController,
+        isScrollable: true,
+        indicatorColor: const Color(0xFF4CAF50),
+        indicatorWeight: 3,
+        indicatorSize: TabBarIndicatorSize.label,
+        labelColor: Colors.white,
+        unselectedLabelColor: const Color(0xFF757575),
+        labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+        unselectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w400),
+        tabs: const [
+          Tab(text: 'Stocks'),
+          Tab(text: 'News'),
+          Tab(text: 'Commodities'),
+          Tab(text: 'Treasuries'),
+          Tab(text: 'Forex/Crypto'),
+        ],
+      ),
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
+      body: SidebarScaffold(
+        currentRoute: _routeForTabIndex(_tabController.index),
+        routeProvider: _routeProvider,
+        explanationProvider: _explanationProvider,
+        body: TabBarView(
+          controller: _tabController,
           children: tabs.map((tab) {
-          if (tab == 'Stocks') {
-            return StockViewTab(stocks: List<Stock>.from(widget.user!.portfolio), userId: widget.user!.id,);
-          } else if (tab == 'News') {
-            return NewsFeedPage();
-          } else if (tab == 'Commodities') {
-            return CommoditiesPage();
-          } else if (tab == 'Treasuries') {
-            return TreasuriesPage();
-          } else if (tab == 'Forex/Crypto') {
-            return const ForexCryptoPage();
-          } else {
-            return Center(child: Text('Coming Soon...', style: TextStyle(color: Colors.grey)));
-          }
-        }).toList(),
+            if (tab == 'Stocks') {
+              return StockViewTab(stocks: List<Stock>.from(widget.user!.portfolio), userId: widget.user!.id,);
+            } else if (tab == 'News') {
+              return NewsFeedPage();
+            } else if (tab == 'Commodities') {
+              return CommoditiesPage();
+            } else if (tab == 'Treasuries') {
+              return TreasuriesPage();
+            } else if (tab == 'Forex/Crypto') {
+              return ForexCryptoPage(
+                onSymbolContextChanged: (symbol) {
+                  _routeProvider.setRoute(
+                    '/forex_crypto',
+                    symbol: symbol,
+                    data: {'assetClass': 'crypto'},
+                  );
+                },
+              );
+            } else {
+              return Center(child: Text('Coming Soon...', style: TextStyle(color: Colors.grey)));
+            }
+          }).toList(),
+        ),
       ),
     );
   }
   @override
   void initState() {
     super.initState();
-        _tabController = TabController(length: tabs.length, vsync: this, initialIndex: 0);
+    _tabController = TabController(length: tabs.length, vsync: this, initialIndex: 0);
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) {
+        _syncRouteContext();
+      }
+    });
+    _syncRouteContext();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   void _openWallet(BuildContext context) async {

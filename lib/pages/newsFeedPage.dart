@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'package:Dogonomics/backend/dogonomicsApi.dart';
+import 'package:Dogonomics/backend/providers.dart';
 import 'package:Dogonomics/utils/constant.dart';
+import 'package:Dogonomics/widgets/copilot_sidebar_widget.dart';
+import 'package:Dogonomics/widgets/explain_tooltip_widget.dart';
 import 'package:Dogonomics/widgets/stockDetailsWidgets.dart';
 import 'package:Dogonomics/widgets/finbertInferenceDialog.dart';
 import 'package:flutter/material.dart';
@@ -15,6 +18,8 @@ class NewsFeedPage extends StatefulWidget {
 }
 
 class _NewsFeedPageState extends State<NewsFeedPage> {
+  final RouteProvider _routeProvider = RouteProvider();
+  final MetricExplanationProvider _explanationProvider = MetricExplanationProvider();
   bool isLoading = true;
   String? error;
   List<NewsItem> news = [];
@@ -171,8 +176,8 @@ class _NewsFeedPageState extends State<NewsFeedPage> {
         centerTitle: true,
         actions: [
           IconButton(
-            icon: Icon(Icons.psychology_outlined, color: ACCENT_GREEN),
-            tooltip: 'FinBERT Analysis',
+            icon: const Icon(Icons.psychology_outlined),
+            tooltip: 'Analyze Sentiment',
             onPressed: () {
               showDialog(
                 context: context,
@@ -230,15 +235,16 @@ class _NewsFeedPageState extends State<NewsFeedPage> {
               child: Row(
                 children: [
                   Icon(
-                    Icons.analytics_outlined,
+                    Icons.auto_awesome,
                     size: 18,
                     color: _showSentimentAnalyzed ? ACCENT_GREEN : TEXT_SECONDARY,
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    'AI Sentiment Analysis',
+                    'Sentiment Analysis Mode',
                     style: BODY_SECONDARY.copyWith(
                       color: _showSentimentAnalyzed ? ACCENT_GREEN : TEXT_SECONDARY,
+                      fontWeight: _showSentimentAnalyzed ? FontWeight.w600 : FontWeight.normal,
                     ),
                   ),
                   const Spacer(),
@@ -259,7 +265,17 @@ class _NewsFeedPageState extends State<NewsFeedPage> {
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: _buildBody(),
+              child: SidebarScaffold(
+                currentRoute: '/news_feed',
+                currentSymbol: widget.symbol,
+                routeProvider: _routeProvider,
+                explanationProvider: _explanationProvider,
+                contextData: {
+                  'sentimentMode': _showSentimentAnalyzed,
+                  'query': _searchQuery,
+                },
+                body: _buildBody(),
+              ),
             ),
           ),
         ],
@@ -274,10 +290,13 @@ class _NewsFeedPageState extends State<NewsFeedPage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              CircularProgressIndicator(color: ACCENT_GREEN),
+              const Icon(Icons.insights_outlined, size: 44, color: ACCENT_GREEN_LIGHT),
               const SizedBox(height: 12),
-              Text('Running AI sentiment analysis...', style: BODY_SECONDARY),
-              Text('This may take a moment', style: CAPTION_TEXT),
+              const CircularProgressIndicator(color: ACCENT_GREEN),
+              const SizedBox(height: 12),
+              Text('Analyzing headline sentiment...', style: BODY_SECONDARY),
+              const SizedBox(height: 4),
+              Text('Preparing signal confidence scores', style: CAPTION_TEXT),
             ],
           ),
         );
@@ -328,16 +347,17 @@ class _NewsFeedPageState extends State<NewsFeedPage> {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: (isPositive ? COLOR_POSITIVE : COLOR_NEGATIVE).withOpacity(0.1),
+        color: (isPositive ? COLOR_POSITIVE : COLOR_NEGATIVE).withOpacity(0.10),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: (isPositive ? COLOR_POSITIVE : COLOR_NEGATIVE).withOpacity(0.3),
+          color: (isPositive ? COLOR_POSITIVE : COLOR_NEGATIVE).withOpacity(0.35),
         ),
       ),
       child: Row(
         children: [
           Icon(
             isPositive ? Icons.trending_up : Icons.trending_down,
+            size: 22,
             color: isPositive ? COLOR_POSITIVE : COLOR_NEGATIVE,
           ),
           const SizedBox(width: 12),
@@ -345,12 +365,22 @@ class _NewsFeedPageState extends State<NewsFeedPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Market Mood: ${isPositive ? "Positive" : "Negative"}',
-                  style: BODY_PRIMARY.copyWith(fontWeight: FontWeight.bold),
+                Row(
+                  children: [
+                    Text(
+                      isPositive ? 'Market Sentiment: Positive' : 'Market Sentiment: Negative',
+                      style: BODY_PRIMARY.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(width: 6),
+                    ExplainTooltipWidget(
+                      metricName: 'Aggregate Sentiment Score',
+                      metricValue: agg.averageScore.toStringAsFixed(2),
+                      iconSize: 13,
+                    ),
+                  ],
                 ),
                 Text(
-                  'Avg Score: ${agg.averageScore.toStringAsFixed(2)} | Confidence: ${(agg.averageConfidence * 100).toStringAsFixed(0)}%',
+                  'Avg Score: ${agg.averageScore.toStringAsFixed(2)} • Confidence: ${(agg.averageConfidence * 100).toStringAsFixed(0)}%',
                   style: CAPTION_TEXT,
                 ),
               ],
@@ -375,7 +405,12 @@ class _NewsFeedPageState extends State<NewsFeedPage> {
       decoration: BoxDecoration(
         color: CARD_BACKGROUND,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: BORDER_COLOR),
+        border: Border(
+          left: BorderSide(color: sentimentColor, width: 3),
+          top: BorderSide(color: BORDER_COLOR),
+          right: BorderSide(color: BORDER_COLOR),
+          bottom: BorderSide(color: BORDER_COLOR),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -386,7 +421,7 @@ class _NewsFeedPageState extends State<NewsFeedPage> {
               Expanded(
                 child: Text(
                   article.title,
-                  style: BODY_PRIMARY.copyWith(fontWeight: FontWeight.w500),
+                  style: BODY_PRIMARY.copyWith(fontWeight: FontWeight.w600),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -395,8 +430,9 @@ class _NewsFeedPageState extends State<NewsFeedPage> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: sentimentColor.withOpacity(0.2),
+                  color: sentimentColor.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: sentimentColor.withOpacity(0.4)),
                 ),
                 child: Text(
                   sentimentLabel.toUpperCase(),
@@ -428,11 +464,17 @@ class _NewsFeedPageState extends State<NewsFeedPage> {
               ),
               Row(
                 children: [
-                  Icon(Icons.analytics_outlined, size: 14, color: TEXT_SECONDARY),
+                  const Icon(Icons.auto_awesome, size: 14, color: TEXT_SECONDARY),
                   const SizedBox(width: 4),
                   Text(
-                    '${(confidence * 100).toStringAsFixed(1)}% confident',
+                    '${(confidence * 100).toStringAsFixed(1)}% confidence',
                     style: CAPTION_TEXT,
+                  ),
+                  const SizedBox(width: 6),
+                  ExplainTooltipWidget(
+                    metricName: 'Sentiment Confidence',
+                    metricValue: '${(confidence * 100).toStringAsFixed(1)}%',
+                    iconSize: 12,
                   ),
                 ],
               ),
@@ -469,9 +511,9 @@ class _NewsFeedPageState extends State<NewsFeedPage> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.newspaper, size: 64, color: TEXT_DISABLED),
+          const Icon(Icons.newspaper_outlined, size: 52, color: TEXT_SECONDARY),
           const SizedBox(height: 12),
-          Text('No news articles found', style: HEADING_SMALL),
+          Text('No news available', style: HEADING_SMALL),
           const SizedBox(height: 8),
           Text('Try a different search or refresh the feed.', style: BODY_SECONDARY),
         ],

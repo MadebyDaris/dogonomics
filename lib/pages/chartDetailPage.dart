@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../backend/dogonomicsApi.dart';
+import '../backend/providers.dart';
 import '../utils/constant.dart';
+import '../widgets/copilot_sidebar_widget.dart';
+import '../widgets/explain_tooltip_widget.dart';
 import '../widgets/infoTooltip.dart';
 
 class ChartDetailPage extends StatefulWidget {
@@ -21,6 +24,8 @@ class ChartDetailPage extends StatefulWidget {
 }
 
 class _ChartDetailPageState extends State<ChartDetailPage> {
+  final RouteProvider _routeProvider = RouteProvider();
+  final MetricExplanationProvider _explanationProvider = MetricExplanationProvider();
   String selectedTimeframe = '1M'; // Default timeframe
   ChartStatistics? statistics;
   late List<ChartDataPoint> _chartData;
@@ -160,16 +165,27 @@ class _ChartDetailPageState extends State<ChartDetailPage> {
       ),
       body: _chartData.isEmpty && !_isLoadingChart
           ? _buildEmptyState()
-          : SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildTimeframeSelector(),
-                  _buildExpandedChart(),
-                  _buildStatisticsCards(),
-                  _buildDetailedMetrics(),
-                  const SizedBox(height: 20),
-                ],
+          : SidebarScaffold(
+              currentRoute: '/chart_details',
+              currentSymbol: widget.symbol,
+              routeProvider: _routeProvider,
+              explanationProvider: _explanationProvider,
+              contextData: {
+                'price': _chartData.isNotEmpty ? _chartData.last.y : null,
+                'timeframe': selectedTimeframe,
+                'periodChange': statistics?.periodChange,
+              },
+              body: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildTimeframeSelector(),
+                    _buildExpandedChart(),
+                    _buildStatisticsCards(),
+                    _buildDetailedMetrics(),
+                    const SizedBox(height: 20),
+                  ],
+                ),
               ),
             ),
     );
@@ -309,6 +325,12 @@ class _ChartDetailPageState extends State<ChartDetailPage> {
                   Text(
                     'Price Chart',
                     style: HEADING_MEDIUM,
+                  ),
+                  const SizedBox(width: 6),
+                  ExplainTooltipWidget(
+                    metricName: 'Price Trend and Momentum',
+                    metricValue: 'Timeframe: $selectedTimeframe',
+                    iconSize: 14,
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -547,9 +569,19 @@ class _ChartDetailPageState extends State<ChartDetailPage> {
                   'Detailed Metrics',
                   style: HEADING_MEDIUM,
                 ),
-                InfoTooltip(
-                  title: 'Chart Metrics',
-                  message: 'These metrics provide detailed analysis of the chart data including price ranges, trends, and volatility measures.',
+                Row(
+                  children: [
+                    InfoTooltip(
+                      title: 'Chart Metrics',
+                      message: 'These metrics provide detailed analysis of the chart data including price ranges, trends, and volatility measures.',
+                    ),
+                    const SizedBox(width: 6),
+                    ExplainTooltipWidget(
+                      metricName: 'Chart Metrics',
+                      metricValue: widget.symbol,
+                      iconSize: 14,
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -558,12 +590,17 @@ class _ChartDetailPageState extends State<ChartDetailPage> {
           const Divider(color: DIVIDER_COLOR, height: 1),
           _buildMetricRow('Price Range', '\$${(statistics!.periodHigh - statistics!.periodLow).toStringAsFixed(2)}'),
           const Divider(color: DIVIDER_COLOR, height: 1),
-          _buildMetricRow('Volatility', statistics!.volatility.toStringAsFixed(4)),
+          _buildMetricRow(
+            'Volatility',
+            statistics!.volatility.toStringAsFixed(4),
+            explanationMetric: 'Volatility',
+          ),
           const Divider(color: DIVIDER_COLOR, height: 1),
           _buildMetricRow(
             'Derivative (Rate of Change)',
             '${statistics!.derivative >= 0 ? '+' : ''}${statistics!.derivative.toStringAsFixed(2)}',
             color: statistics!.derivative >= 0 ? COLOR_POSITIVE : COLOR_NEGATIVE,
+            explanationMetric: 'Derivative (Rate of Change)',
           ),
           const Divider(color: DIVIDER_COLOR, height: 1),
           _buildMetricRow('Data Points', statistics!.dataPoints.toString()),
@@ -578,15 +615,27 @@ class _ChartDetailPageState extends State<ChartDetailPage> {
     );
   }
 
-  Widget _buildMetricRow(String label, String value, {Color? color}) {
+  Widget _buildMetricRow(String label, String value, {Color? color, String? explanationMetric}) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: BODY_SECONDARY,
+          Row(
+            children: [
+              Text(
+                label,
+                style: BODY_SECONDARY,
+              ),
+              if (explanationMetric != null) ...[
+                const SizedBox(width: 6),
+                ExplainTooltipWidget(
+                  metricName: explanationMetric,
+                  metricValue: value,
+                  iconSize: 13,
+                ),
+              ],
+            ],
           ),
           Text(
             value,

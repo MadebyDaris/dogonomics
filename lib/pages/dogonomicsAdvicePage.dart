@@ -1,5 +1,6 @@
 import 'package:Dogonomics/backend/dogonomicsApi.dart';
 import 'package:Dogonomics/utils/constant.dart';
+import 'package:Dogonomics/widgets/explain_tooltip_widget.dart';
 import 'package:flutter/material.dart';
 
 class DogonomicsAdvicePage extends StatefulWidget {
@@ -66,8 +67,8 @@ class _DogonomicsAdvicePageState extends State<DogonomicsAdvicePage> {
       appBar: AppBar(
         backgroundColor: CARD_BACKGROUND,
         title: Text(
-          'Dogonomics Advice: ${widget.symbol}',
-          style: const TextStyle(color: TEXT_PRIMARY, fontSize: 18, fontWeight: FontWeight.bold),
+          'Dogonomics Recommendation: ${widget.symbol}',
+          style: const TextStyle(color: TEXT_PRIMARY, fontSize: 17, fontWeight: FontWeight.bold),
         ),
         iconTheme: const IconThemeData(color: TEXT_PRIMARY),
         actions: [
@@ -87,15 +88,17 @@ class _DogonomicsAdvicePageState extends State<DogonomicsAdvicePage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            Icon(Icons.insights_outlined, size: 48, color: ACCENT_GREEN_BRIGHT),
+            SizedBox(height: 16),
             CircularProgressIndicator(color: ACCENT_GREEN_BRIGHT),
             SizedBox(height: 16),
             Text(
-              'Analyzing market data...',
-              style: TextStyle(color: TEXT_SECONDARY, fontSize: 14),
+              'Analyzing recommendation model...',
+              style: TextStyle(color: TEXT_SECONDARY, fontSize: 15, fontWeight: FontWeight.w600),
             ),
-            SizedBox(height: 8),
+            SizedBox(height: 6),
             Text(
-              'Combining sentiment, technicals, and fundamentals',
+              'Processing sentiment, technicals, and fundamentals',
               style: TextStyle(color: TEXT_DISABLED, fontSize: 12),
             ),
           ],
@@ -177,15 +180,23 @@ class _DogonomicsAdvicePageState extends State<DogonomicsAdvicePage> {
         children: [
           Icon(recIcon, color: recColor, size: 48),
           const SizedBox(height: 12),
-          Text(
-            advice.recommendation,
-            style: TextStyle(
-              color: recColor,
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.5,
+          Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Text(
+              advice.recommendation,
+              style: TextStyle(
+                color: recColor,
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.5,
+              ),
             ),
-          ),
+            const SizedBox(width: 8),
+            ExplainTooltipWidget(
+              metricName: 'Recommendation',
+              metricValue: advice.recommendation,
+              iconSize: 14,
+            ),
+          ]),
           const SizedBox(height: 8),
           Text(
             widget.symbol,
@@ -276,6 +287,12 @@ class _DogonomicsAdvicePageState extends State<DogonomicsAdvicePage> {
               Icon(Icons.speed, color: ACCENT_GREEN_LIGHT, size: 20),
               const SizedBox(width: 8),
               Text('Aggregate Score', style: HEADING_SMALL),
+              const SizedBox(width: 6),
+              ExplainTooltipWidget(
+                metricName: 'Aggregate Score',
+                metricValue: score.toStringAsFixed(1),
+                iconSize: 13,
+              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -336,9 +353,9 @@ class _DogonomicsAdvicePageState extends State<DogonomicsAdvicePage> {
         children: [
           Row(
             children: [
-              Icon(Icons.analytics_outlined, color: ACCENT_GREEN_LIGHT, size: 20),
+              const Icon(Icons.analytics_outlined, size: 18, color: ACCENT_GREEN_LIGHT),
               const SizedBox(width: 8),
-              Text('Score Breakdown', style: HEADING_SMALL),
+              Text('Key Analysis Signals', style: HEADING_SMALL),
             ],
           ),
           const SizedBox(height: 16),
@@ -565,19 +582,19 @@ class _DogonomicsAdvicePageState extends State<DogonomicsAdvicePage> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: COLOR_WARNING.withOpacity(0.08),
+        color: COLOR_WARNING.withOpacity(0.07),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: COLOR_WARNING.withOpacity(0.2)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.info_outline, color: COLOR_WARNING, size: 18),
+          const Icon(Icons.info_outline, size: 16, color: COLOR_WARNING),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'Dogonomics Advice is generated from automated analysis of news sentiment, technical indicators, and financial metrics. '
-              'This is not financial advice. Always do your own research before making investment decisions.',
+              'This recommendation is generated from automated analysis of news sentiment, technical indicators, and financial metrics. '
+              'This is not financial advice — always do your own research before making investment decisions.',
               style: TextStyle(color: COLOR_WARNING.withOpacity(0.8), fontSize: 11, height: 1.4),
             ),
           ),

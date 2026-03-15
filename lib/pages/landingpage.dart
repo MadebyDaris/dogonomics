@@ -324,7 +324,17 @@ class _DogonomicsLandingPageState extends State<DogonomicsLandingPage>
           ),
           const SizedBox(height: 16),
           AnimatedSwitcher(
-            duration: const Duration(milliseconds: 800),
+            duration: const Duration(milliseconds: 600),
+            transitionBuilder: (child, animation) => FadeTransition(
+              opacity: animation,
+              child: SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(0, 0.08),
+                  end: Offset.zero,
+                ).animate(animation),
+                child: child,
+              ),
+            ),
             child: Text(
               _quotes[_currentQuoteIndex],
               key: ValueKey(_currentQuoteIndex),
@@ -332,7 +342,7 @@ class _DogonomicsLandingPageState extends State<DogonomicsLandingPage>
                 fontSize: 18,
                 color: Colors.white,
                 fontStyle: FontStyle.italic,
-                height: 1.4,
+                height: 1.5,
               ),
               textAlign: TextAlign.center,
             ),
@@ -455,32 +465,68 @@ class _DogonomicsLandingPageState extends State<DogonomicsLandingPage>
   Widget _buildContinueButton() {
     return Container(
       padding: const EdgeInsets.all(24),
-      child: SizedBox(
-        width: double.infinity,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
         height: 56,
-        child: ElevatedButton(
-          onPressed: _isLoadingUser ? null : _continueToPortfolio,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF19B305),
-            foregroundColor: Colors.white,
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
+        width: double.infinity,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: _isLoadingUser
+                ? [const Color(0xFF2E7D32), const Color(0xFF388E3C)]
+                : [const Color(0xFF19B305), const Color(0xFF2E7D32)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.account_balance_wallet, size: 24),
-              const SizedBox(width: 12),
-              const Text(
-                'Continue to Portfolio',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: _isLoadingUser
+              ? []
+              : [
+                  BoxShadow(
+                    color: const Color(0xFF19B305).withOpacity(0.40),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: _isLoadingUser ? null : _continueToPortfolio,
+            borderRadius: BorderRadius.circular(14),
+            splashColor: Colors.white.withOpacity(0.15),
+            child: Center(
+              child: _isLoadingUser
+                  ? Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white70),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        const Text(
+                          'Loading your portfolio...',
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    )
+                  : const Text(
+                      'Open Portfolio',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+            ),
           ),
         ),
       ),

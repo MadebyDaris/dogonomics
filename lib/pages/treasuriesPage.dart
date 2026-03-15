@@ -163,7 +163,16 @@ class _TreasuriesPageState extends State<TreasuriesPage> with SingleTickerProvid
   Widget _buildYieldCurveTab() {
     if (isLoadingYield) {
       return const Center(
-        child: CircularProgressIndicator(color: Colors.blue),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.account_balance_outlined, size: 40, color: ACCENT_GREEN_BRIGHT),
+            SizedBox(height: 12),
+            CircularProgressIndicator(color: ACCENT_GREEN_BRIGHT),
+            SizedBox(height: 12),
+            Text('Loading yield data...', style: TextStyle(color: Color(0xFF9E9E9E), fontSize: 13)),
+          ],
+        ),
       );
     }
 
@@ -173,9 +182,13 @@ class _TreasuriesPageState extends State<TreasuriesPage> with SingleTickerProvid
 
     if (yieldCurveData == null || yieldCurveData!.data.isEmpty) {
       return const Center(
-        child: Text(
-          'No yield curve data available',
-          style: TextStyle(color: Colors.grey),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.info_outline, size: 40, color: TEXT_SECONDARY),
+            SizedBox(height: 12),
+            Text('No yield data available', style: TextStyle(color: Colors.grey, fontSize: 15)),
+          ],
         ),
       );
     }

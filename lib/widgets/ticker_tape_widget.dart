@@ -136,10 +136,7 @@ class _TickerTapeWidgetState extends State<TickerTapeWidget>
             top: 4,
             child: Opacity(
               opacity: 0.1,
-              child: Text(
-                '🐕',
-                style: TextStyle(fontSize: 48),
-              ),
+              child: Icon(Icons.show_chart, size: 48, color: Colors.white),
             ),
           ),
 

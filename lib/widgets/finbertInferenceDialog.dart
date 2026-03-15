@@ -92,13 +92,32 @@ class _FinBertInferenceDialogState extends State<FinBertInferenceDialog> {
               padding: const EdgeInsets.fromLTRB(24, 24, 16, 16),
               child: Row(
                 children: [
-                  Icon(Icons.psychology_outlined, color: ACCENT_GREEN, size: 28),
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: ACCENT_GREEN.withOpacity(0.15),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: ACCENT_GREEN.withOpacity(0.4)),
+                    ),
+                    child: const Center(child: Icon(Icons.psychology_outlined, size: 20, color: ACCENT_GREEN)),
+                  ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Text(
-                      'FinBERT Sentiment Analysis',
-                      style: HEADING_MEDIUM,
-                      overflow: TextOverflow.ellipsis,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Sentiment Analyzer',
+                          style: HEADING_MEDIUM,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'FinBERT Financial Sentiment',
+                          style: CAPTION_TEXT,
+                        ),
+                      ],
                     ),
                   ),
                   IconButton(
@@ -117,20 +136,20 @@ class _FinBertInferenceDialogState extends State<FinBertInferenceDialog> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Analyze the sentiment of financial text using AI',
+                      'Analyze financial text for market sentiment signals',
                       style: BODY_SECONDARY,
                     ),
                     const SizedBox(height: 24),
                     
                     // Text input
-                    Text('Enter text to analyze:', style: BODY_PRIMARY),
+                    Text('Enter financial text:', style: BODY_PRIMARY),
                     const SizedBox(height: 8),
                     TextField(
                       controller: _textController,
                       maxLines: 5,
                       style: BODY_PRIMARY,
                       decoration: InputDecoration(
-                        hintText: 'e.g., "Apple reported strong quarterly earnings beating analyst expectations..."',
+                        hintText: 'Paste a headline, earnings release, or market commentary...',
                         hintStyle: BODY_SECONDARY,
                         filled: true,
                         fillColor: APP_BACKGROUND,
@@ -178,7 +197,7 @@ class _FinBertInferenceDialogState extends State<FinBertInferenceDialog> {
                                   const Text('Analyzing...'),
                                 ],
                               )
-                            : const Text('Analyze Sentiment', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                            : const Text('Analyze Text', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                       ),
                     ),
                     
@@ -215,9 +234,9 @@ class _FinBertInferenceDialogState extends State<FinBertInferenceDialog> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.analytics_outlined, size: 64, color: TEXT_DISABLED),
+                              const Icon(Icons.description_outlined, size: 48, color: TEXT_SECONDARY),
                               const SizedBox(height: 12),
-                              Text('Enter text and click Analyze', style: BODY_SECONDARY),
+                              Text('Enter text to begin analysis.', style: BODY_SECONDARY),
                             ],
                           ),
                         ),
@@ -314,7 +333,7 @@ class _FinBertInferenceDialogState extends State<FinBertInferenceDialog> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Analyzed using DoggoFinBERT - a specialized financial sentiment model',
+                    'Analyzed using FinBERT, a specialized financial sentiment model',
                     style: CAPTION_TEXT.copyWith(color: COLOR_INFO),
                   ),
                 ),

@@ -260,11 +260,11 @@ class _MarketIndicatorsPageState extends State<MarketIndicatorsPage> {
 
   String _getMarketSentiment(int positive, int negative) {
     if (positive > negative) {
-      return '🐂 Market is showing bullish sentiment';
+      return 'Market is showing bullish sentiment';
     } else if (negative > positive) {
-      return '🐻 Market is showing bearish sentiment';
+      return 'Market is showing bearish sentiment';
     } else {
-      return '➡️ Market is showing mixed sentiment';
+      return 'Market is showing mixed sentiment';
     }
   }
 

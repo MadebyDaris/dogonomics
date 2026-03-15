@@ -8,7 +8,9 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart';
 
 class ForexCryptoPage extends StatefulWidget {
-  const ForexCryptoPage({Key? key}) : super(key: key);
+  final ValueChanged<String>? onSymbolContextChanged;
+
+  const ForexCryptoPage({Key? key, this.onSymbolContextChanged}) : super(key: key);
 
   @override
   _ForexCryptoPageState createState() => _ForexCryptoPageState();
@@ -156,7 +158,16 @@ class _ForexCryptoPageState extends State<ForexCryptoPage>
   Widget _buildForexTab() {
     if (_isLoadingForex) {
       return const Center(
-        child: CircularProgressIndicator(color: ACCENT_GREEN_BRIGHT),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.currency_exchange, size: 40, color: ACCENT_GREEN_BRIGHT),
+            SizedBox(height: 12),
+            CircularProgressIndicator(color: ACCENT_GREEN_BRIGHT),
+            SizedBox(height: 12),
+            Text('Loading forex rates...', style: TextStyle(color: TEXT_SECONDARY, fontSize: 13)),
+          ],
+        ),
       );
     }
     if (_forexError != null) {
@@ -318,96 +329,100 @@ class _ForexCryptoPageState extends State<ForexCryptoPage>
     final isPositive = quote.change >= 0;
     final changeColor = isPositive ? COLOR_POSITIVE : COLOR_NEGATIVE;
     final changeIcon = isPositive ? Icons.trending_up : Icons.trending_down;
+    final symbol = quote.displaySymbol.split('/').first;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(16),
-      decoration: cardDecoration(),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              // Icon
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: _getCryptoColor(quote.name).withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Center(
-                  child: Text(
-                    _getCryptoIcon(quote.name),
-                    style: const TextStyle(fontSize: 20),
+    return GestureDetector(
+      onTap: () => widget.onSymbolContextChanged?.call(symbol),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(16),
+        decoration: cardDecoration(),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                // Icon
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: _getCryptoColor(quote.name).withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Center(
+                    child: Text(
+                      _getCryptoIcon(quote.name),
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              // Name & pair
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      quote.name,
-                      style: const TextStyle(color: TEXT_PRIMARY, fontSize: 15, fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      quote.displaySymbol,
-                      style: const TextStyle(color: TEXT_SECONDARY, fontSize: 12),
-                    ),
-                  ],
-                ),
-              ),
-              // Price & change
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    _formatCryptoPrice(quote.price),
-                    style: const TextStyle(color: TEXT_PRIMARY, fontSize: 15, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 2),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
+                const SizedBox(width: 12),
+                // Name & pair
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(changeIcon, color: changeColor, size: 14),
-                      const SizedBox(width: 4),
                       Text(
-                        '${isPositive ? '+' : ''}${quote.changePercent.toStringAsFixed(2)}%',
-                        style: TextStyle(color: changeColor, fontSize: 12, fontWeight: FontWeight.w600),
+                        quote.name,
+                        style: const TextStyle(color: TEXT_PRIMARY, fontSize: 15, fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        quote.displaySymbol,
+                        style: const TextStyle(color: TEXT_SECONDARY, fontSize: 12),
                       ),
                     ],
                   ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          // Action buttons row
-          Row(
-            children: [
-              Expanded(
-                child: _buildCryptoActionButton(
-                  icon: Icons.shopping_cart_outlined,
-                  label: 'Buy',
-                  color: COLOR_POSITIVE,
-                  onTap: () => _buyCrypto(quote),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildCryptoActionButton(
-                  icon: Icons.psychology_outlined,
-                  label: 'Sentiment',
-                  color: ACCENT_GREEN_LIGHT,
-                  onTap: () => _viewCryptoSentiment(quote),
+                // Price & change
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      _formatCryptoPrice(quote.price),
+                      style: const TextStyle(color: TEXT_PRIMARY, fontSize: 15, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(changeIcon, color: changeColor, size: 14),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${isPositive ? '+' : ''}${quote.changePercent.toStringAsFixed(2)}%',
+                          style: TextStyle(color: changeColor, fontSize: 12, fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-              ),
-            ],
-          ),
-        ],
+              ],
+            ),
+            const SizedBox(height: 10),
+            // Action buttons row
+            Row(
+              children: [
+                Expanded(
+                  child: _buildCryptoActionButton(
+                    icon: Icons.shopping_cart_outlined,
+                    label: 'Buy',
+                    color: COLOR_POSITIVE,
+                    onTap: () => _buyCrypto(quote),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildCryptoActionButton(
+                    icon: Icons.psychology_outlined,
+                    label: 'Sentiment',
+                    color: ACCENT_GREEN_LIGHT,
+                    onTap: () => _viewCryptoSentiment(quote),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -586,7 +601,14 @@ class _ForexCryptoPageState extends State<ForexCryptoPage>
     return Padding(
       padding: const EdgeInsets.all(32),
       child: Center(
-        child: Text(message, style: BODY_SECONDARY),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.info_outline, size: 34, color: TEXT_SECONDARY),
+            const SizedBox(height: 8),
+            Text(message, style: BODY_SECONDARY),
+          ],
+        ),
       ),
     );
   }
@@ -618,14 +640,7 @@ class _ForexCryptoPageState extends State<ForexCryptoPage>
   }
 
   String _getCurrencyFlag(String code) {
-    const flags = {
-      'EUR': '🇪🇺', 'GBP': '🇬🇧', 'JPY': '🇯🇵', 'AUD': '🇦🇺',
-      'CAD': '🇨🇦', 'CHF': '🇨🇭', 'CNY': '🇨🇳', 'NZD': '🇳🇿',
-      'SEK': '🇸🇪', 'NOK': '🇳🇴', 'MXN': '🇲🇽', 'SGD': '🇸🇬',
-      'HKD': '🇭🇰', 'KRW': '🇰🇷', 'INR': '🇮🇳', 'BRL': '🇧🇷',
-      'ZAR': '🇿🇦', 'TRY': '🇹🇷', 'RUB': '🇷🇺', 'PLN': '🇵🇱',
-    };
-    return flags[code] ?? '💱';
+    return code;
   }
 
   String _getCurrencyName(String code) {
@@ -644,11 +659,18 @@ class _ForexCryptoPageState extends State<ForexCryptoPage>
 
   String _getCryptoIcon(String name) {
     const icons = {
-      'Bitcoin': '₿', 'Ethereum': 'Ξ', 'BNB': '◆', 'Solana': '◎',
-      'XRP': '✕', 'Dogecoin': '🐕', 'Cardano': '₳', 'Polkadot': '●',
-      'Avalanche': '🔺', 'Polygon': '⬡',
+      'Bitcoin': 'BTC',
+      'Ethereum': 'ETH',
+      'BNB': 'BNB',
+      'Solana': 'SOL',
+      'XRP': 'XRP',
+      'Dogecoin': 'DOGE',
+      'Cardano': 'ADA',
+      'Polkadot': 'DOT',
+      'Avalanche': 'AVAX',
+      'Polygon': 'MATIC',
     };
-    return icons[name] ?? '🪙';
+    return icons[name] ?? 'CRYPTO';
   }
 
   Color _getCryptoColor(String name) {

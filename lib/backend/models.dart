@@ -164,8 +164,8 @@ class TickerItem {
     return '#9E9E9E'; // Gray for neutral
   }
 
-  /// Source emoji badge
-  String get sourceBadge => source == 'reddit' ? '🔴' : '📰';
+  /// Source badge
+  String get sourceBadge => source == 'reddit' ? 'R' : 'NEWS';
 }
 
 /// Market sentiment overview for "Doggo Sent of the Market" widget

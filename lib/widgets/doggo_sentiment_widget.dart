@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import '../backend/models.dart';
 import '../backend/providers.dart';
-import '../utils/constant.dart';
+import '../widgets/explain_tooltip_widget.dart';
 
-/// "Doggo Sent of the Market" - Market sentiment overview widget
+/// Market sentiment overview widget
 /// Displays overall bullish/bearish sentiment, top trending symbols, and 24h trend
 class DoggoSentimentWidget extends StatefulWidget {
   final DoggoSentimentProvider sentimentProvider;
@@ -141,7 +141,7 @@ class _DoggoSentimentWidgetState extends State<DoggoSentimentWidget>
               color: const Color(0xFF2E7D32),
             ),
             child: Center(
-              child: Text('🐕', style: TextStyle(fontSize: 28)),
+              child: Icon(Icons.insights_outlined, color: Colors.white, size: 26),
             ),
           ),
           SizedBox(width: 12),
@@ -150,16 +150,17 @@ class _DoggoSentimentWidgetState extends State<DoggoSentimentWidget>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Doggo Sent of the Market',
+                  'Market Sentiment Summary',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
+                    letterSpacing: 0.3,
                   ),
                 ),
                 SizedBox(height: 4),
                 Text(
-                  'Overall: ${sentiment.overallTrend}',
+                  'Detected trend: ${sentiment.overallTrend}',
                   style: TextStyle(
                     fontSize: 12,
                     color: const Color(0xFF9E9E9E),
@@ -183,7 +184,7 @@ class _DoggoSentimentWidgetState extends State<DoggoSentimentWidget>
               ),
             ),
             child: Text(
-              sentiment.bullishPercentage > 50 ? '📈 Bullish' : '📉 Bearish',
+              sentiment.bullishPercentage > 50 ? 'Bullish' : 'Bearish',
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
@@ -211,6 +212,12 @@ class _DoggoSentimentWidgetState extends State<DoggoSentimentWidget>
               fontWeight: FontWeight.bold,
               color: Colors.white,
             ),
+          ),
+          const SizedBox(height: 4),
+          ExplainTooltipWidget(
+            metricName: 'Market Sentiment Distribution',
+            metricValue: '${sentiment.bullishPercentage.toStringAsFixed(1)}% bullish',
+            iconSize: 13,
           ),
           SizedBox(height: 12),
           
@@ -438,27 +445,32 @@ class _DoggoSentimentWidgetState extends State<DoggoSentimentWidget>
 
   Widget _buildLoadingState() {
     return Container(
-      margin: EdgeInsets.all(12),
-      padding: EdgeInsets.all(20),
+      margin: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
         color: const Color(0xFF1E1E1E),
-        border: Border.all(
-          color: const Color(0xFF313131),
-          width: 1,
-        ),
+        border: Border.all(color: const Color(0xFF2E7D32).withOpacity(0.4)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF4CAF50).withOpacity(0.06),
+            blurRadius: 12,
+            spreadRadius: 1,
+          ),
+        ],
       ),
       child: Column(
         children: [
-          CircularProgressIndicator(
-            color: const Color(0xFF66BB6A),
-          ),
-          SizedBox(height: 12),
-          Text(
-            'Loading market sentiment...',
+          const Icon(Icons.insights_outlined, size: 36, color: Color(0xFF66BB6A)),
+          const SizedBox(height: 12),
+          const CircularProgressIndicator(color: Color(0xFF66BB6A)),
+          const SizedBox(height: 12),
+          const Text(
+            'Analyzing market sentiment...',
             style: TextStyle(
-              color: const Color(0xFF9E9E9E),
-              fontSize: 12,
+              color: Color(0xFF66BB6A),
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
@@ -468,39 +480,45 @@ class _DoggoSentimentWidgetState extends State<DoggoSentimentWidget>
 
   Widget _buildErrorState(String error) {
     return Container(
-      margin: EdgeInsets.all(12),
-      padding: EdgeInsets.all(16),
+      margin: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        color: const Color(0xFFF44336).withOpacity(0.1),
-        border: Border.all(
-          color: const Color(0xFFF44336),
-          width: 1,
-        ),
+        color: const Color(0xFFF44336).withOpacity(0.08),
+        border: Border.all(color: const Color(0xFFF44336).withOpacity(0.5)),
       ),
       child: Column(
         children: [
-          Icon(
-            Icons.error_outline,
-            color: const Color(0xFFF44336),
-            size: 24,
-          ),
-          SizedBox(height: 12),
-          Text(
-            'Failed to load market sentiment',
+          const Icon(Icons.error_outline, size: 32, color: Color(0xFFF44336)),
+          const SizedBox(height: 10),
+          const Text(
+            'Unable to load sentiment data',
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 13,
               fontWeight: FontWeight.bold,
-              color: const Color(0xFFF44336),
+              color: Color(0xFFF44336),
             ),
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(
             error,
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 11,
-              color: const Color(0xFFE0E0E0),
+            style: const TextStyle(fontSize: 11, color: Color(0xFFE0E0E0)),
+          ),
+          const SizedBox(height: 12),
+          GestureDetector(
+            onTap: _handleRefresh,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF44336).withOpacity(0.15),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFF44336).withOpacity(0.4)),
+              ),
+              child: const Text(
+                'Try Again',
+                style: TextStyle(color: Color(0xFFF44336), fontSize: 12, fontWeight: FontWeight.bold),
+              ),
             ),
           ),
         ],

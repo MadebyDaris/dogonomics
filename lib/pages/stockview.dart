@@ -7,13 +7,11 @@ import 'package:Dogonomics/pages/socialSentimentPage.dart';
 import 'package:Dogonomics/pages/dogonomicsAdvicePage.dart';
 import 'package:Dogonomics/pages/transactionHistoryPage.dart';
 import 'package:Dogonomics/utils/constant.dart';
-import 'package:Dogonomics/utils/logoManager.dart';
 import 'package:Dogonomics/utils/stockDialog.dart';
 import 'package:Dogonomics/utils/tickerData.dart';
 import 'package:Dogonomics/widgets/infoTooltip.dart';
 
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 
 class StockViewTab extends StatefulWidget {
@@ -252,10 +250,49 @@ class _StockViewTabState extends State<StockViewTab> {
             );
           },
         ),
-        _buildQuickActionButton(
-          icon: Icons.lightbulb_outline,
-          label: 'Dogonomics Advice',
-          onPressed: () => _showAdviceSymbolPicker(),
+        // Special Sniff Advice CTA button
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => _showAdviceSymbolPicker(),
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF1B5E20), Color(0xFF2E7D32)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF4CAF50).withOpacity(0.22),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+                border: Border.all(
+                  color: const Color(0xFF4CAF50).withOpacity(0.45),
+                ),
+              ),
+              child: const Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.psychology_outlined, size: 22, color: Color(0xFF66BB6A)),
+                  SizedBox(height: 4),
+                  Text(
+                    'AI Advice',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF66BB6A),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ],
     );
@@ -353,50 +390,109 @@ class _StockViewTabState extends State<StockViewTab> {
     );
   }
 
+  Widget _buildDogAssistantBanner() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0D1F0D),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFF2E7D32).withOpacity(0.7)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF4CAF50).withOpacity(0.08),
+            blurRadius: 12,
+            spreadRadius: 1,
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.smart_toy_outlined, size: 24, color: Color(0xFF66BB6A)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'AI Copilot is active',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF66BB6A),
+                  ),
+                ),
+                Text(
+                  _stocks.isEmpty
+                      ? 'No tracked symbols yet. Add a stock to begin.'
+                      : 'Tracking ${_stocks.length} stock${_stocks.length == 1 ? '' : 's'}. Select one for deeper analysis.',
+                  style: const TextStyle(fontSize: 12, color: Color(0xFF9E9E9E)),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildEducationalTipsSection() {
     return InfoCard(
-      title: 'Portfolio Tip',
-      summary: 'Diversification is key to managing risk. Consider spreading investments across different sectors.',
+      title: 'Portfolio Guidance',
+      summary: 'Diversification is key. Spread risk so one bad day does not impact the full portfolio.',
       detailedInfo: 'A well-diversified portfolio typically includes:\n\n'
           '• Stocks from various sectors (tech, healthcare, finance, etc.)\n'
           '• Bonds for stability\n'
           '• Commodities as an inflation hedge\n'
           '• International exposure\n\n'
           'This helps reduce risk because different assets often perform differently under the same market conditions.',
-      icon: Icons.school,
-      iconColor: COLOR_WARNING,
+      icon: Icons.auto_awesome,
+      iconColor: ACCENT_GREEN_LIGHT,
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
       children: [
+        _buildDogAssistantBanner(),
+        const SizedBox(height: 12),
         _buildPortfolioSummaryCard(),
-        SizedBox(height: 16),
-        
+        const SizedBox(height: 16),
+
         _buildQuickActionsRow(),
-        SizedBox(height: 16),
+        const SizedBox(height: 16),
 
         // Educational Tips Section
         _buildEducationalTipsSection(),
-        SizedBox(height: 16),
+        const SizedBox(height: 16),
 
         if (_stocks.isEmpty)
           Container(
-            padding: EdgeInsets.all(20),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
+            margin: const EdgeInsets.only(bottom: 4),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1E1E1E),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFF313131)),
+            ),
             child: Column(
               children: [
-                Icon(Icons.indeterminate_check_box_outlined, size: 64, color: Colors.grey),
-                SizedBox(height: 16),
-                Text(
-                  'Your portfolio is empty',
-                  style: TextStyle(fontSize: 18, color: Colors.grey),
+                const Icon(Icons.inventory_2_outlined, size: 56, color: TEXT_SECONDARY),
+                const SizedBox(height: 16),
+                const Text(
+                  'No portfolio holdings yet',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
                 ),
+                const SizedBox(height: 8),
                 Text(
-                  'Add some stocks to get started!',
-                  style: TextStyle(fontSize: 14, color: Colors.grey),
+                  'Add your first stock to start tracking performance and analysis.',
+                  style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+                  textAlign: TextAlign.center,
                 ),
               ],
             ),
@@ -511,7 +607,7 @@ class _StockViewTabState extends State<StockViewTab> {
         builder: (context) => SimpleDialog(
           backgroundColor: STOCK_CARD,
           title: const Text(
-            'Choose a stock for Dogonomics Advice',
+            'Choose a stock for AI Advice',
             style: TextStyle(color: Colors.white, fontSize: 16),
           ),
           children: [

@@ -3,6 +3,8 @@ import 'package:Dogonomics/widgets/stockDetailsWidgets.dart';
 import 'package:Dogonomics/widgets/infoTooltip.dart';
 import 'package:Dogonomics/pages/chartDetailPage.dart';
 import 'package:Dogonomics/pages/newsFeedPage.dart';
+import 'package:Dogonomics/backend/providers.dart';
+import 'package:Dogonomics/widgets/copilot_sidebar_widget.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
@@ -20,6 +22,8 @@ class StockDetailsPage extends StatefulWidget {
 
 class _StockDetailsPageState extends State<StockDetailsPage> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final RouteProvider _routeProvider = RouteProvider();
+  final MetricExplanationProvider _explanationProvider = MetricExplanationProvider();
   StockData? stockData;
   SentimentData? sentimentData;
   CompanyProfile? companyProfile;
@@ -144,47 +148,57 @@ class _StockDetailsPageState extends State<StockDetailsPage> with SingleTickerPr
     return Scaffold(
       backgroundColor: APP_BACKGROUND,
       appBar: _buildAppBar(),
-      body: Column(
-        children: [
-          if (isLoadingStock) 
-            Padding(
-              padding: EdgeInsets.all(20),
-              child: CircularProgressIndicator(color: ACCENT_GREEN),
-            )
-          else if (stockError != null)
-            _buildErrorWidget(stockError!)
-          else if (stockData != null) ...[
-            CompanyHeader(stockData: stockData!),
-            if (stockData!.chartData.isNotEmpty)
-              GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ChartDetailPage(
-                        symbol: widget.symbol,
-                        companyName: stockData!.companyName,
-                        chartData: stockData!.chartData,
+      body: SidebarScaffold(
+        currentRoute: '/stock_details',
+        currentSymbol: widget.symbol,
+        routeProvider: _routeProvider,
+        explanationProvider: _explanationProvider,
+        contextData: {
+          'price': stockData?.currentPrice,
+          'sentiment': sentimentData?.overallSentiment,
+        },
+        body: Column(
+          children: [
+            if (isLoadingStock)
+              Padding(
+                padding: EdgeInsets.all(20),
+                child: CircularProgressIndicator(color: ACCENT_GREEN),
+              )
+            else if (stockError != null)
+              _buildErrorWidget(stockError!)
+            else if (stockData != null) ...[
+              CompanyHeader(stockData: stockData!),
+              if (stockData!.chartData.isNotEmpty)
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ChartDetailPage(
+                          symbol: widget.symbol,
+                          companyName: stockData!.companyName,
+                          chartData: stockData!.chartData,
+                        ),
                       ),
-                    ),
-                  );
-                },
-                child: ChartWidget(chartData: stockData!.chartData),
+                    );
+                  },
+                  child: ChartWidget(chartData: stockData!.chartData),
+                ),
+            ],
+            _buildTabBar(),
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildOverviewTab(),
+                  _buildSentimentTab(),
+                  _buildHistoryTab(),
+                ],
               ),
-          ],
-          _buildTabBar(),
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildOverviewTab(),
-                _buildSentimentTab(),
-                _buildHistoryTab(),
-              ],
             ),
-          ),
-        ],
-      )
+          ],
+        ),
+      ),
     );
   }
     PreferredSizeWidget _buildAppBar() {
@@ -246,10 +260,12 @@ class _StockDetailsPageState extends State<StockDetailsPage> with SingleTickerPr
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(color: ACCENT_GREEN),
+            const Icon(Icons.insights_outlined, size: 44, color: ACCENT_GREEN_LIGHT),
+            const SizedBox(height: 12),
+            const CircularProgressIndicator(color: ACCENT_GREEN),
             const SizedBox(height: 16),
             Text(
-              'Analyzing sentiment...\nThis may take up to 60 seconds',
+              'Analyzing ${widget.symbol} news...\nThis may take up to 60 seconds',
               textAlign: TextAlign.center,
               style: BODY_SECONDARY,
             ),
@@ -281,7 +297,7 @@ class _StockDetailsPageState extends State<StockDetailsPage> with SingleTickerPr
                 backgroundColor: ACCENT_GREEN,
               ),
               onPressed: _loadSentimentData,
-              child: const Text('Retry'),
+              child: const Text('Try Again'),
             ),
           ],
         ),

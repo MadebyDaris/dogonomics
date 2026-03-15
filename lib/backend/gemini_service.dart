@@ -191,7 +191,7 @@ Respond in 1-2 paragraphs, keeping it conversational and helpful.''';
 
       final content = [Content.text(prompt)];
       
-      await for (final chunk in _model.streamGenerateContent(content)) {
+      await for (final chunk in _model.generateContentStream(content)) {
         if (chunk.text != null) {
           yield chunk.text!;
         }

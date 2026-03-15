@@ -125,8 +125,8 @@ class _ChatPageState extends State<ChatPage> {
                 shape: BoxShape.circle,
                 color: const Color(0xFF2E7D32),
               ),
-              child: Center(
-                child: Text('🐕', style: TextStyle(fontSize: 18)),
+              child: const Center(
+                child: Icon(Icons.smart_toy_outlined, size: 18, color: Colors.white),
               ),
             ),
             SizedBox(width: 12),
@@ -240,8 +240,8 @@ class _ChatPageState extends State<ChatPage> {
                 shape: BoxShape.circle,
                 color: const Color(0xFF2E7D32).withOpacity(0.2),
               ),
-              child: Center(
-                child: Text('🐕', style: TextStyle(fontSize: 32)),
+              child: const Center(
+                child: Icon(Icons.smart_toy_outlined, size: 32, color: Color(0xFF2E7D32)),
               ),
             ),
             SizedBox(height: 16),
