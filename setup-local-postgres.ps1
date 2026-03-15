@@ -27,10 +27,17 @@ if (-not $psqlExists) {
 Write-Host "PostgreSQL found!" -ForegroundColor Green
 Write-Host ""
 
-# Prompt for PostgreSQL admin credentials
-$PG_ADMIN_USER = Read-Host "Enter PostgreSQL admin username (default: postgres)"
+# Prompt for PostgreSQL admin credentials (use superuser, typically 'postgres')
+$PG_ADMIN_USER = Read-Host "Enter PostgreSQL superuser name (default: postgres) [NOT 'dogonomics']"
 if ([string]::IsNullOrWhiteSpace($PG_ADMIN_USER)) {
     $PG_ADMIN_USER = "postgres"
+}
+
+if ($PG_ADMIN_USER -eq "dogonomics") {
+    Write-Host "ERROR: You must use the PostgreSQL superuser (typically 'postgres'), not 'dogonomics'" -ForegroundColor Red
+    Write-Host "The 'dogonomics' user is being created by this script." -ForegroundColor Red
+    Read-Host "Press Enter to exit"
+    exit 1
 }
 
 Write-Host ""
@@ -78,6 +85,43 @@ if ($LASTEXITCODE -ne 0) {
     Write-Host "ERROR: Failed to initialize database schema!" -ForegroundColor Red
     Read-Host "Press Enter to exit"
     exit 1
+}
+
+# Clear password from environment
+$env:PGPASSWORD = $null
+
+Write-Host ""
+Write-Host "Validating database setup..." -ForegroundColor Yellow
+Write-Host ""
+
+# Set password again for validation queries
+$env:PGPASSWORD = "dogonomics_password"
+
+# Verify tables exist
+$tables = & psql -U dogonomics -h localhost -d dogonomics -t -c "SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE';"
+if ([int]$tables -gt 0) {
+    Write-Host "✓ Database tables created successfully ($tables tables found)" -ForegroundColor Green
+} else {
+    Write-Host "✗ ERROR: No tables found in database!" -ForegroundColor Red
+    $env:PGPASSWORD = $null
+    Read-Host "Press Enter to exit"
+    exit 1
+}
+
+# Verify TimescaleDB extension
+$hasTimescaleDB = & psql -U dogonomics -h localhost -d dogonomics -t -c "SELECT count(*) FROM pg_extension WHERE extname='timescaledb';"
+if ([int]$hasTimescaleDB -gt 0) {
+    Write-Host "✓ TimescaleDB extension is active" -ForegroundColor Green
+} else {
+    Write-Host "✗ WARNING: TimescaleDB extension not found (features may be limited)" -ForegroundColor Yellow
+}
+
+# Verify hypertables exist
+$hypertables = & psql -U dogonomics -h localhost -d dogonomics -t -c "SELECT count(*) FROM timescaledb_information.hypertables;"
+if ([int]$hypertables -gt 0) {
+    Write-Host "✓ Hypertables created successfully ($hypertables hypertables found)" -ForegroundColor Green
+} else {
+    Write-Host "⚠ Note: No hypertables found (may be expected if schema uses standard tables)" -ForegroundColor Yellow
 }
 
 # Clear password from environment

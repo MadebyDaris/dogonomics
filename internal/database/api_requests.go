@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"log"
 	"time"
 
 	"github.com/google/uuid"
@@ -24,8 +25,11 @@ type APIRequest struct {
 // LogAPIRequest saves an API request to the database
 func LogAPIRequest(ctx context.Context, req *APIRequest) error {
 	if DB == nil {
-		return nil // Silently skip if DB not configured
+		return ErrDatabaseNotConnected // Return error instead of silently skipping
 	}
+
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 
 	query := `
 		INSERT INTO api_requests (
@@ -45,6 +49,11 @@ func LogAPIRequest(ctx context.Context, req *APIRequest) error {
 		req.ErrorMessage,
 	)
 
+	if err != nil {
+		// Log but don't fail the API request - logging is non-critical
+		log.Printf("Warning: Failed to log API request: %v", err)
+		return nil
+	}
 	return err
 }
 

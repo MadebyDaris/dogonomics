@@ -31,7 +31,7 @@ const (
 
 type Server struct {
 	mcp     *server.MCPServer
-	sse     *server.SSEServer
+	sse     *server.SSEServer // receive automatic events
 	addr    string
 	baseURL string
 	deps    Dependencies
@@ -147,7 +147,7 @@ func (s *Server) registerResources() {
 		),
 		s.handleSentimentTrendResource,
 	)
-	}
+}
 
 func (s *Server) registerTools() {
 	s.mcp.AddTool(
@@ -187,7 +187,7 @@ func (s *Server) registerTools() {
 		),
 		s.handleGetCompanyProfileTool,
 	)
-	}
+}
 
 func (s *Server) registerPrompts() {
 	s.mcp.AddPrompt(
@@ -207,7 +207,7 @@ func (s *Server) registerPrompts() {
 		),
 		s.handleSummarizeSymbolStatePrompt,
 	)
-	}
+}
 
 func (s *Server) handleHealthResource(ctx context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
 	payload := map[string]any{
@@ -352,8 +352,8 @@ func (s *Server) handleAnalyzeLiveSentimentTool(ctx context.Context, req mcp.Cal
 
 	aggregate := sentAnalysis.FetchStockSentiment(ctx, newsItems)
 	return jsonToolResult(map[string]any{
-		"ticker":    strings.ToUpper(ticker),
-		"aggregate": aggregate,
+		"ticker":     strings.ToUpper(ticker),
+		"aggregate":  aggregate,
 		"news_count": len(newsItems),
 	})
 }
@@ -373,7 +373,7 @@ func (s *Server) handleExplainSentimentShiftPrompt(ctx context.Context, req mcp.
 			),
 		},
 	), nil
-	}
+}
 
 func (s *Server) handleSummarizeSymbolStatePrompt(ctx context.Context, req mcp.GetPromptRequest) (*mcp.GetPromptResult, error) {
 	ticker := strings.ToUpper(strings.TrimSpace(req.Params.Arguments["ticker"]))
@@ -390,7 +390,7 @@ func (s *Server) handleSummarizeSymbolStatePrompt(ctx context.Context, req mcp.G
 			),
 		},
 	), nil
-	}
+}
 
 type contextKey string
 

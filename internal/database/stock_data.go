@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/MadebyDaris/dogonomics/internal/DogonomicsFetching"
@@ -10,6 +11,7 @@ import (
 	"github.com/MadebyDaris/dogonomics/internal/NewsClient"
 	"github.com/MadebyDaris/dogonomics/sentAnalysis"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 )
 
 // SaveStockQuote saves a stock quote to the database
@@ -274,7 +276,7 @@ func GetCompanyProfile(ctx context.Context, symbol string) (*DogonomicsProcessin
 	return &profile, nil
 }
 
-// SaveChartData saves a batch of historical chart data points
+// SaveChartData saves a batch of historical chart data points efficiently using pgx Batch API
 func SaveChartData(ctx context.Context, symbol string, data []DogonomicsProcessing.ChartDataPoint, source string) error {
 	if DB == nil {
 		return ErrDatabaseNotConnected
@@ -284,6 +286,8 @@ func SaveChartData(ctx context.Context, symbol string, data []DogonomicsProcessi
 		return nil
 	}
 
+	// Use batch API for efficient bulk insert
+	batch := &pgx.Batch{}
 	query := `
 		INSERT INTO chart_data (symbol, date, open_price, high_price, low_price, close_price, volume, source)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -291,7 +295,7 @@ func SaveChartData(ctx context.Context, symbol string, data []DogonomicsProcessi
 	`
 
 	for _, point := range data {
-		_, err := DB.Exec(ctx, query,
+		batch.Queue(query,
 			symbol,
 			point.Timestamp.Format("2006-01-02"),
 			point.Open,
@@ -301,8 +305,20 @@ func SaveChartData(ctx context.Context, symbol string, data []DogonomicsProcessi
 			point.Volume,
 			source,
 		)
+	}
+
+	// Execute batch with timeout
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	results := DB.SendBatch(ctx, batch)
+	defer results.Close()
+
+	// Check results for errors
+	for i := 0; i < batch.Len(); i++ {
+		_, err := results.Exec()
 		if err != nil {
-			return err
+			return fmt.Errorf("batch insert failed at row %d: %w", i, err)
 		}
 	}
 

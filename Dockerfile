@@ -34,7 +34,6 @@ FROM --platform=$TARGETOS/$TARGETARCH alpine:latest
 RUN apk add --no-cache ca-certificates
 WORKDIR /
 COPY --from=builder /out/dogonomics /dogonomics
-COPY --from=builder /app/sentAnalysis/DoggoFinBERT.onnx /sentAnalysis/DoggoFinBERT.onnx
 
 EXPOSE ${PORT:-8080}
 ENV PORT=8080

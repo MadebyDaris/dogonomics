@@ -27,6 +27,7 @@ var (
 // Call this once at startup before registering the auth middleware.
 // It reads the service-account JSON from FIREBASE_SERVICE_ACCOUNT_PATH (file)
 // or FIREBASE_SERVICE_ACCOUNT_JSON (raw JSON string).
+// Backward compatibility: FIREBASE_CREDENTIALS is also accepted as a file path.
 func InitFirebase() error {
 	firebaseOnce.Do(func() {
 		ctx := context.Background()
@@ -35,6 +36,9 @@ func InitFirebase() error {
 
 		if path := os.Getenv("FIREBASE_SERVICE_ACCOUNT_PATH"); path != "" {
 			opts = append(opts, option.WithCredentialsFile(path))
+		} else if legacyPath := os.Getenv("FIREBASE_CREDENTIALS"); legacyPath != "" {
+			// Keep supporting older deployments that still use FIREBASE_CREDENTIALS.
+			opts = append(opts, option.WithCredentialsFile(legacyPath))
 		} else if raw := os.Getenv("FIREBASE_SERVICE_ACCOUNT_JSON"); raw != "" {
 			opts = append(opts, option.WithCredentialsJSON([]byte(raw)))
 		}

@@ -18,24 +18,43 @@ if %errorlevel% neq 0 (
 echo Starting PostgreSQL container...
 echo.
 
-docker run -d ^
-    --name dogonomics-postgres ^
-    -e POSTGRES_USER=dogonomics ^
-    -e POSTGRES_PASSWORD=dogonomics_password ^
-    -e POSTGRES_DB=dogonomics ^
-    -p 5432:5432 ^
-    -v "%cd%\internal\database\schema.sql:/docker-entrypoint-initdb.d/01-schema.sql" ^
-    postgres:14-alpine
+REM Check if container already exists
+docker ps -a --format "table {{.Names}}" | find "dogonomics-postgres" >nul
+if %errorlevel% equ 0 (
+    echo Container already exists. Starting existing container...
+    docker start dogonomics-postgres >nul 2>&1
+    if %errorlevel% neq 0 (
+        echo ERROR: Failed to start existing container!
+        pause
+        exit /b 1
+    )
+) else (
+    echo Creating new PostgreSQL container...
+    docker run -d ^
+        --name dogonomics-postgres ^
+        -e POSTGRES_USER=dogonomics ^
+        -e POSTGRES_PASSWORD=dogonomics_password ^
+        -e POSTGRES_DB=dogonomics ^
+        -p 5432:5432 ^
+        -v "%cd%\internal\database\schema.sql:/docker-entrypoint-initdb.d/01-schema.sql" ^
+        postgres:14-alpine
+    
+    if %errorlevel% neq 0 (
+        echo.
+        echo ERROR: Failed to create PostgreSQL container!
+        echo.
+        pause
+        exit /b 1
+    )
+    
+    echo Waiting for PostgreSQL to be ready...
+    timeout /t 5 /nobreak
+)
 
+REM Verify the container is running
+docker ps --format "table {{.Names}}" | find "dogonomics-postgres" >nul
 if %errorlevel% neq 0 (
-    echo.
-    echo ERROR: Failed to start PostgreSQL container!
-    echo.
-    echo If the container already exists, you can:
-    echo   1. Stop it:  docker stop dogonomics-postgres
-    echo   2. Remove it: docker rm dogonomics-postgres
-    echo   3. Then run this script again
-    echo.
+    echo ERROR: Container is not running!
     pause
     exit /b 1
 )
