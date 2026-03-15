@@ -8,6 +8,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -63,6 +64,17 @@ func Connect(cfg *Config) error {
 	config.MaxConnLifetime = time.Hour
 	config.MaxConnIdleTime = 30 * time.Minute
 	config.HealthCheckPeriod = 1 * time.Minute
+
+	// Add per-statement timeout (30 seconds default)
+	// Applications can override by creating context with timeout
+	config.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
+		// Set statement timeout to 30 seconds to prevent long-running queries
+		if _, err := conn.Exec(ctx, "SET statement_timeout = '30s'"); err != nil {
+			// Log but don't fail - some connections may not support this
+			log.Printf("Warning: Could not set statement timeout: %v", err)
+		}
+		return nil
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

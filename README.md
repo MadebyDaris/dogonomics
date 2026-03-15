@@ -10,6 +10,7 @@ controller/                    # HTTP handlers (Swagger-annotated)
 internal/
   DogonomicsFetching/          # Finnhub API client (quotes, profiles, financials)
   DogonomicsProcessing/        # Shared data models (StockDetailData, ChartDataPoint, etc.)
+  mcpgateway/                  # MCP server over SSE (resources, tools, prompts)
   PolygonClient/               # Polygon.io client (tickers, historical OHLCV)
   NewsClient/                  # Multi-source news aggregation (Finnhub, EODHD, Alpha Vantage)
   TreasuryClient/              # US Treasury Fiscal Data API client
@@ -28,19 +29,40 @@ docs/                          # Swagger generated docs
 
 ## Quick Start
 
+### 🚀 **Start Here:** [GETTING_STARTED.md](GETTING_STARTED.md)
+A complete step-by-step checklist to get the backend running (15-30 minutes).
+
+### Option 1: Docker (Recommended)
 ```bash
-# 1. Set environment variables
-cp .env.example .env   # then fill in your API keys
+# 1. Make sure you have Docker installed
+# 2. Copy .env template and add your API keys
+cp .env.example .env
 
-# 2. Run with Docker (recommended)
+# 3. Start the full stack
 docker compose up --build
-
-# 3. Or run locally
-go run dogonomics.go
 
 # 4. Open Swagger UI
 # http://localhost:8080/swagger/index.html
 ```
+
+### Option 2: Local PostgreSQL (Automated)
+```bash
+# 1. Make sure you have PostgreSQL installed
+# 2. Run automated setup (detects your PostgreSQL superuser)
+.\setup-local-postgres-automated.ps1
+
+# 3. Copy .env and add API keys
+cp .env.example .env
+
+# 4. Run the backend
+go run dogonomics.go
+
+# 5. Open Swagger UI
+# http://localhost:8080/swagger/index.html
+```
+
+### Option 3: Local Everything
+See [SETUP_GUIDE.md](SETUP_GUIDE.md) for detailed instructions.
 
 ## Environment Variables
 
@@ -59,6 +81,25 @@ go run dogonomics.go
 | `REDIS_HOST`           | No       | Redis host (default: localhost)      |
 | `REDIS_PORT`           | No       | Redis port (default: 6379)           |
 | `KAFKA_BROKER`         | No       | Kafka broker address (enables event publishing) |
+| `MCP_ENABLED`          | No       | Enable MCP SSE server (default: true) |
+| `MCP_ADDR`             | No       | MCP listen address (default: :8081) |
+| `MCP_BASE_URL`         | No       | Public MCP base URL (default: http://localhost:8081) |
+
+## MCP Server
+
+The backend now includes an MCP gateway exposed over SSE on a separate port.
+
+- Default SSE endpoint: `http://localhost:8081/mcp/sse`
+- Default message endpoint: `http://localhost:8081/mcp/message`
+- Transport: SSE
+
+Initial MCP surface area:
+
+- Resources: health, OHLCV history, stored sentiment trend
+- Tools: latest quote, latest symbol news, live sentiment analysis, company profile
+- Prompts: sentiment-shift explanation, symbol-state summary
+
+This first pass is additive. Existing REST and WebSocket endpoints remain unchanged.
 
 ## Docker
 

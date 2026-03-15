@@ -3,9 +3,9 @@ services:
   timescaledb:
     image: timescale/timescaledb:latest-pg14
     environment:
-      - POSTGRES_USER=dogonomics
-      - POSTGRES_PASSWORD=dogonomics
-      - POSTGRES_DB=dogonomics
+      - POSTGRES_USER=${DB_USER:-dogonomics}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-dogonomics_password}
+      - POSTGRES_DB=${DB_NAME:-dogonomics}
     ports:
       - "5432:5432"
     volumes:
@@ -37,16 +37,23 @@ services:
       - "${PORT:-8080}:${PORT:-8080}"
     environment:
       - FINNHUB_API_KEY=${FINNHUB_API_KEY}
+      - POLYGON_API_KEY=${POLYGON_API_KEY}
       - EODHD_API_KEY=${EODHD_API_KEY}
+      - ALPHA_VANTAGE_API_KEY=${ALPHA_VANTAGE_API_KEY}
+      - GNEWS_API_KEY=${GNEWS_API_KEY}
+      - FIREBASE_SERVICE_ACCOUNT_PATH=${FIREBASE_SERVICE_ACCOUNT_PATH:-}
+      - FIREBASE_SERVICE_ACCOUNT_JSON=${FIREBASE_SERVICE_ACCOUNT_JSON:-}
+      - FIREBASE_CREDENTIALS=${FIREBASE_CREDENTIALS:-}
+      - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS:-}
       - PORT=${PORT:-8080}
       - DB_HOST=timescaledb
-      - DB_PORT=5432
-      - DB_USER=dogonomics
-      - DB_PASSWORD=dogonomics
-      - DB_NAME=dogonomics
-      - DB_SSLMODE=disable
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_USER=${DB_USER:-dogonomics}
+      - DB_PASSWORD=${DB_PASSWORD:-dogonomics_password}
+      - DB_NAME=${DB_NAME:-dogonomics}
+      - DB_SSLMODE=${DB_SSLMODE:-disable}
       - REDIS_HOST=redis
-      - REDIS_PORT=6379
+      - REDIS_PORT=${REDIS_PORT:-6379}
       - KAFKA_BROKER=${KAFKA_BROKER:-}
     volumes:
       - ./sentAnalysis/DoggoFinBERT.onnx:/sentAnalysis/DoggoFinBERT.onnx:ro
@@ -66,16 +73,23 @@ services:
       - "${ONNX_PORT:-8081}:${PORT:-8080}"
     environment:
       - FINNHUB_API_KEY=${FINNHUB_API_KEY}
+      - POLYGON_API_KEY=${POLYGON_API_KEY}
       - EODHD_API_KEY=${EODHD_API_KEY}
+      - ALPHA_VANTAGE_API_KEY=${ALPHA_VANTAGE_API_KEY}
+      - GNEWS_API_KEY=${GNEWS_API_KEY}
+      - FIREBASE_SERVICE_ACCOUNT_PATH=${FIREBASE_SERVICE_ACCOUNT_PATH:-}
+      - FIREBASE_SERVICE_ACCOUNT_JSON=${FIREBASE_SERVICE_ACCOUNT_JSON:-}
+      - FIREBASE_CREDENTIALS=${FIREBASE_CREDENTIALS:-}
+      - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS:-}
       - PORT=${PORT:-8080}
       - DB_HOST=timescaledb
-      - DB_PORT=5432
-      - DB_USER=dogonomics
-      - DB_PASSWORD=dogonomics
-      - DB_NAME=dogonomics
-      - DB_SSLMODE=disable
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_USER=${DB_USER:-dogonomics}
+      - DB_PASSWORD=${DB_PASSWORD:-dogonomics_password}
+      - DB_NAME=${DB_NAME:-dogonomics}
+      - DB_SSLMODE=${DB_SSLMODE:-disable}
       - REDIS_HOST=redis
-      - REDIS_PORT=6379
+      - REDIS_PORT=${REDIS_PORT:-6379}
     depends_on:
       timescaledb:
         condition: service_healthy
@@ -100,7 +114,7 @@ services:
     volumes:
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
     restart: unless-stopped
 
   # Kafka + Zookeeper (opt-in via: docker compose --profile kafka up)
