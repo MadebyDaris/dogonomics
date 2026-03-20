@@ -9,14 +9,60 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/MadebyDaris/dogonomics/BertInference"
 	"github.com/MadebyDaris/dogonomics/internal/workerpool"
 )
 
 var apiKey = os.Getenv("EODHD_API_KEY")
+
+var (
+	bertSemaphore     chan struct{}
+	bertSemaphoreOnce sync.Once
+	bertQueueTimeout  time.Duration
+)
+
+func initBERTSemaphore() {
+	bertSemaphoreOnce.Do(func() {
+		maxConcurrency := readPositiveInt("BERT_MAX_CONCURRENCY", 1)
+		queueTimeoutSeconds := readPositiveInt("BERT_QUEUE_TIMEOUT_SECONDS", 65)
+
+		bertSemaphore = make(chan struct{}, maxConcurrency)
+		bertQueueTimeout = time.Duration(queueTimeoutSeconds) * time.Second
+	})
+}
+
+func readPositiveInt(envName string, fallback int) int {
+	v := strings.TrimSpace(os.Getenv(envName))
+	if v == "" {
+		return fallback
+	}
+	parsed, err := strconv.Atoi(v)
+	if err != nil || parsed <= 0 {
+		return fallback
+	}
+	return parsed
+}
+
+func runSerializedBERTInference(text, modelPath string) (*BertInference.BERTSentiment, error) {
+	initBERTSemaphore()
+
+	timer := time.NewTimer(bertQueueTimeout)
+	defer timer.Stop()
+
+	select {
+	case bertSemaphore <- struct{}{}:
+		defer func() { <-bertSemaphore }()
+	case <-timer.C:
+		return nil, fmt.Errorf("bert inference queue timeout after %s", bertQueueTimeout)
+	}
+
+	return BertInference.RunBERTInference(text, modelPath)
+}
 
 type Sentiment struct {
 	Polarity float64 `json:"polarity"`
@@ -88,11 +134,11 @@ func AnalyzeNews(title string, content string) (*BertInference.BERTSentiment, er
 			fullText = fullText[:lastPeriod+1]
 		}
 	}
-	return BertInference.RunBERTInference(text, "./sentAnalysis/DoggoFinBERT.onnx")
+	return runSerializedBERTInference(text, "./sentAnalysis/DoggoFinBERT.onnx")
 }
 
 func RunBERTInferenceONNX(text, modelPath, vocabPath string) (*BertInference.BERTSentiment, error) {
-	return BertInference.RunBERTInference(text, modelPath)
+	return runSerializedBERTInference(text, modelPath)
 }
 
 // FetchStockSentiment analyses news items using a worker pool for concurrent BERT inference.
@@ -138,7 +184,7 @@ func FetchStockSentiment(ctx context.Context, newsItems []NewsItem) *StockSentim
 		}
 	}
 
-	workerpool.Run(ctx, 3, tasks)
+	workerpool.Run(ctx, 1, tasks)
 
 	// Apply results back to newsItems and compute aggregates
 	var totalSentiment float64
@@ -242,7 +288,7 @@ func FetchAndAnalyzeNews(ctx context.Context, symbol string) ([]NewsItem, error)
 		}
 	}
 
-	workerpool.Run(ctx, 3, tasks)
+	workerpool.Run(ctx, 1, tasks)
 	return newsItems, nil
 }
 

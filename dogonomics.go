@@ -20,6 +20,8 @@ import (
 	"github.com/MadebyDaris/dogonomics/controller"
 	"github.com/MadebyDaris/dogonomics/docs"
 	"github.com/MadebyDaris/dogonomics/internal/DogonomicsFetching"
+	"github.com/MadebyDaris/dogonomics/internal/CommoditiesClient"
+	"github.com/MadebyDaris/dogonomics/internal/TreasuryClient"
 	"github.com/MadebyDaris/dogonomics/internal/cache"
 	"github.com/MadebyDaris/dogonomics/internal/database"
 	"github.com/MadebyDaris/dogonomics/internal/events"
@@ -84,9 +86,15 @@ func main() {
 
 	var mcpServer *mcpgateway.Server
 	if mcpgateway.EnabledFromEnv() {
+		// Initialize additional clients for MCP
+		treasuryClient := TreasuryClient.NewClient()
+		commoditiesClient := CommoditiesClient.NewClient()
+
 		mcpServer, err = mcpgateway.New(mcpgateway.Dependencies{
-			Finnhub: finnhubClient,
-			Redis:   cache.Client,
+			Finnhub:     finnhubClient,
+			Redis:       cache.Client,
+			Treasury:    treasuryClient,
+			Commodities: commoditiesClient,
 		})
 		if err != nil {
 			log.Printf("WARNING: MCP server init failed: %v", err)
@@ -159,7 +167,9 @@ func main() {
 	// 4. Database logger & cache are last
 	r.Use(middleware.CORSMiddleware())
 	r.Use(middleware.RateLimitMiddleware())
+	r.Use(middleware.APIKeyMiddleware())
 	r.Use(middleware.AuthMiddleware())
+	r.Use(middleware.UserRateLimitMiddleware())
 	r.Use(middleware.DatabaseLogger())
 	r.Use(middleware.CacheMiddleware(5 * time.Minute))
 
@@ -244,6 +254,9 @@ func main() {
 	r.GET("/commodities/metals", controller.GetCommodityMetals)
 	r.GET("/commodities/agriculture", controller.GetCommodityAgriculture)
 
+	// Economy (New)
+	r.GET("/economy/indicators", controller.GetEconomicIndicators)
+
 	// Financial Indicators & Advice
 	r.GET("/indicators/:symbol", controller.GetFinancialIndicators)
 	r.GET("/advice/:symbol", controller.GetDogonomicsAdvice)
@@ -258,6 +271,10 @@ func main() {
 
 	// Social Sentiment
 	r.GET("/social/sentiment/:symbol", controller.GetSocialSentiment)
+	
+	// Reddit Scraper
+	r.GET("/social/reddit/financial", controller.GetRedditFinancialNews)
+	r.GET("/social/reddit/:subreddit", controller.GetSubredditPosts)
 
 	// Database query endpoints
 	r.GET("/db/sentiment/history/:symbol", controller.GetSentimentHistoryHandler)
@@ -268,6 +285,11 @@ func main() {
 
 	// WebSocket endpoints (token verified via query param)
 	r.GET("/ws/quotes/:symbol", func(c *gin.Context) {
+		if !middleware.IsAPIKeyAuthorized(middleware.APIKeyFromRequest(c)) {
+			c.JSON(401, gin.H{"error": "Invalid or missing API key"})
+			return
+		}
+
 		token := c.Query("token")
 		if token != "" {
 			if _, err := middleware.VerifyWSToken(token); err != nil {
@@ -279,6 +301,11 @@ func main() {
 		ws.ServeWS(wsHub, "quotes:"+symbol, c.Writer, c.Request)
 	})
 	r.GET("/ws/news", func(c *gin.Context) {
+		if !middleware.IsAPIKeyAuthorized(middleware.APIKeyFromRequest(c)) {
+			c.JSON(401, gin.H{"error": "Invalid or missing API key"})
+			return
+		}
+
 		token := c.Query("token")
 		if token != "" {
 			if _, err := middleware.VerifyWSToken(token); err != nil {

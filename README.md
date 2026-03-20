@@ -81,6 +81,15 @@ See [SETUP_GUIDE.md](SETUP_GUIDE.md) for detailed instructions.
 | `REDIS_HOST`           | No       | Redis host (default: localhost)      |
 | `REDIS_PORT`           | No       | Redis port (default: 6379)           |
 | `KAFKA_BROKER`         | No       | Kafka broker address (enables event publishing) |
+| `API_KEY_REQUIRED`     | No       | Require API key auth (recommended: true in production) |
+| `API_ALLOWED_KEYS`     | No       | Comma-separated API key allowlist |
+| `API_KEY`              | No       | Single API key alias (legacy/convenience) |
+| `RATE_LIMIT_RPM`       | No       | Fallback global requests/minute limit |
+| `RATE_LIMIT_RPM_IP`    | No       | Per-IP requests/minute limit |
+| `RATE_LIMIT_RPM_KEY`   | No       | Per-API-key requests/minute limit |
+| `RATE_LIMIT_RPM_USER`  | No       | Per-authenticated-user requests/minute limit |
+| `BERT_MAX_CONCURRENCY` | No       | Max concurrent FinBERT inferences (recommended: 1) |
+| `BERT_QUEUE_TIMEOUT_SECONDS` | No | Queue wait timeout before FinBERT request fails |
 | `MCP_ENABLED`          | No       | Enable MCP SSE server (default: true) |
 | `MCP_ADDR`             | No       | MCP listen address (default: :8081) |
 | `MCP_BASE_URL`         | No       | Public MCP base URL (default: http://localhost:8081) |

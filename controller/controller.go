@@ -6,13 +6,17 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"strings"
 	"strconv"
 	"time"
 
 	"github.com/MadebyDaris/dogonomics/BertInference"
+	"github.com/MadebyDaris/dogonomics/internal/CoinGeckoClient"
 	"github.com/MadebyDaris/dogonomics/internal/CommoditiesClient"
 	"github.com/MadebyDaris/dogonomics/internal/DogonomicsFetching"
 	"github.com/MadebyDaris/dogonomics/internal/DogonomicsProcessing"
+	"github.com/MadebyDaris/dogonomics/internal/ForexClient"
+	"github.com/MadebyDaris/dogonomics/internal/FredClient"
 	"github.com/MadebyDaris/dogonomics/internal/NewsClient"
 	"github.com/MadebyDaris/dogonomics/internal/PolygonClient"
 	"github.com/MadebyDaris/dogonomics/internal/TreasuryClient"
@@ -30,6 +34,9 @@ var (
 	treasuryClient           *TreasuryClient.Client
 	commoditiesClient        *CommoditiesClient.Client
 	newsClient               *NewsClient.NewsClient
+	coinGeckoClient          *CoinGeckoClient.Client
+	forexClient              *ForexClient.Client
+	fredClient               *FredClient.Client
 	wsHub                    *ws.Hub
 	kafkaProducer            *events.Producer
 )
@@ -58,6 +65,9 @@ func Init(fc *DogonomicsFetching.Client) {
 	treasuryClient = TreasuryClient.NewClient()
 	commoditiesClient = CommoditiesClient.NewClient()
 	newsClient = NewsClient.NewNewsClient()
+	coinGeckoClient = CoinGeckoClient.NewClient()
+	forexClient = ForexClient.NewClient()
+	fredClient = FredClient.NewClient()
 }
 
 // SetWSHub sets the WebSocket hub for real-time broadcasting
@@ -337,7 +347,7 @@ func RunFinBertInference(c *gin.Context) {
 	}
 
 	modelPath := "./sentAnalysis/DoggoFinBERT.onnx"
-	sentiment, err := BertInference.RunBERTInference(req.Text, modelPath)
+	sentiment, err := sentAnalysis.RunBERTInferenceONNX(req.Text, modelPath, "")
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": fmt.Sprintf("Failed to run BERT inference: %v", err),
@@ -1580,9 +1590,8 @@ func GetDogonomicsAdvice(c *gin.Context) {
 // @Router       /forex/rates [get]
 func GetForexRates(c *gin.Context) {
 	base := c.DefaultQuery("base", "USD")
-	ctx := c.Request.Context()
 
-	rates, err := dogonomicsFetchingClient.GetForexRates(ctx, base)
+	rates, err := forexClient.GetLatestRates(base)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -1602,7 +1611,7 @@ func GetForexRates(c *gin.Context) {
 	}
 
 	var pairs []ForexPair
-	for symbol, rate := range rates.Quote {
+	for symbol, rate := range rates.Rates {
 		if majorSet[symbol] {
 			pairs = append(pairs, ForexPair{
 				Symbol: symbol,
@@ -1655,24 +1664,29 @@ func GetForexSymbols(c *gin.Context) {
 // @Failure      500  {object}  ErrorResponse
 // @Router       /crypto/quotes [get]
 func GetCryptoQuotes(c *gin.Context) {
-	exchange := c.DefaultQuery("exchange", "binance")
-	ctx := c.Request.Context()
+	// Map common tickers to CoinGecko IDs
+	symbolToID := map[string]string{
+		"BTC":   "bitcoin",
+		"ETH":   "ethereum",
+		"BNB":   "binancecoin",
+		"SOL":   "solana",
+		"XRP":   "ripple",
+		"DOGE":  "dogecoin",
+		"ADA":   "cardano",
+		"DOT":   "polkadot",
+		"AVAX":  "avalanche-2",
+		"MATIC": "matic-network",
+	}
 
-	popularPairs := []struct {
-		Symbol  string
-		Display string
-		Name    string
-	}{
-		{"BINANCE:BTCUSDT", "BTC/USDT", "Bitcoin"},
-		{"BINANCE:ETHUSDT", "ETH/USDT", "Ethereum"},
-		{"BINANCE:BNBUSDT", "BNB/USDT", "BNB"},
-		{"BINANCE:SOLUSDT", "SOL/USDT", "Solana"},
-		{"BINANCE:XRPUSDT", "XRP/USDT", "XRP"},
-		{"BINANCE:DOGEUSDT", "DOGE/USDT", "Dogecoin"},
-		{"BINANCE:ADAUSDT", "ADA/USDT", "Cardano"},
-		{"BINANCE:DOTUSDT", "DOT/USDT", "Polkadot"},
-		{"BINANCE:AVAXUSDT", "AVAX/USDT", "Avalanche"},
-		{"BINANCE:MATICUSDT", "MATIC/USDT", "Polygon"},
+	var ids []string
+	for _, id := range symbolToID {
+		ids = append(ids, id)
+	}
+
+	markets, err := coinGeckoClient.GetCoinsMarkets("usd", ids)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
 	}
 
 	type CryptoQuote struct {
@@ -1688,80 +1702,96 @@ func GetCryptoQuotes(c *gin.Context) {
 		ChangePercent float64 `json:"change_percent"`
 	}
 
-	now := time.Now().Unix()
-	yesterday := now - 86400
-
-	type result struct {
-		idx   int
-		quote CryptoQuote
-		err   error
-	}
-
-	resultCh := make(chan result, len(popularPairs))
-	for i, pair := range popularPairs {
-		go func(idx int, sym, display, name string) {
-			candle, err := dogonomicsFetchingClient.GetCryptoCandle(ctx, sym, "D", yesterday, now)
-			if err != nil {
-				resultCh <- result{idx: idx, err: err}
-				return
-			}
-			if len(candle.Close) == 0 {
-				resultCh <- result{idx: idx, err: fmt.Errorf("no candle data")}
-				return
-			}
-			lastIdx := len(candle.Close) - 1
-			price := candle.Close[lastIdx]
-			open := candle.Open[0]
-			change := price - open
-			changePct := 0.0
-			if open > 0 {
-				changePct = (change / open) * 100
-			}
-			high := candle.High[0]
-			low := candle.Low[0]
-			vol := candle.Volume[0]
-			for _, h := range candle.High {
-				if h > high {
-					high = h
-				}
-			}
-			for _, l := range candle.Low {
-				if l < low {
-					low = l
-				}
-			}
-			for j := 1; j < len(candle.Volume); j++ {
-				vol += candle.Volume[j]
-			}
-			resultCh <- result{idx: idx, quote: CryptoQuote{
-				Symbol:        sym,
-				DisplaySymbol: display,
-				Name:          name,
-				Price:         price,
-				High24h:       high,
-				Low24h:        low,
-				Open:          open,
-				Volume:        vol,
-				Change:        change,
-				ChangePercent: changePct,
-			}}
-		}(i, pair.Symbol, pair.Display, pair.Name)
-	}
-
 	var quotes []CryptoQuote
-	for range popularPairs {
-		r := <-resultCh
-		if r.err == nil {
-			quotes = append(quotes, r.quote)
-		}
+	for _, m := range markets {
+		// Calculate open approx
+		open := m.CurrentPrice - m.PriceChange24h
+		
+		quotes = append(quotes, CryptoQuote{
+			Symbol:        strings.ToUpper(m.Symbol),
+			DisplaySymbol: strings.ToUpper(m.Symbol) + "/USDT", // Keep format expected by frontend
+			Name:          m.Name,
+			Price:         m.CurrentPrice,
+			High24h:       m.High24h,
+			Low24h:        m.Low24h,
+			Open:          open,
+			Volume:        m.TotalVolume,
+			Change:        m.PriceChange24h,
+			ChangePercent: m.PriceChangePercentage24h,
+		})
 	}
-
-	_ = exchange // used as a parameter label
 
 	c.JSON(http.StatusOK, gin.H{
-		"exchange": exchange,
+		"exchange": "coingecko",
 		"count":    len(quotes),
 		"quotes":   quotes,
+	})
+}
+
+// GetEconomicIndicators godoc
+// @Summary      Get major economic indicators
+// @Description  Returns key economic data from FRED (GDP, CPI, Unemployment, Fed Funds)
+// @Tags         economy
+// @Produce      json
+// @Success      200  {object}  interface{}
+// @Failure      500  {object}  ErrorResponse
+// @Router       /economy/indicators [get]
+func GetEconomicIndicators(c *gin.Context) {
+	indicators := map[string]string{
+		"GDP":      "Gross Domestic Product",
+		"CPIAUCSL": "Consumer Price Index (CPI)",
+		"UNRATE":   "Unemployment Rate",
+		"FEDFUNDS": "Federal Funds Rate",
+	}
+
+	type IndicatorData struct {
+		ID          string                  `json:"id"`
+		Name        string                  `json:"name"`
+		LatestValue string                  `json:"latest_value"`
+		LatestDate  string                  `json:"latest_date"`
+		History     []FredClient.Observation `json:"history"`
+	}
+
+	results := make([]IndicatorData, 0)
+	
+	// Fetch sequentially to be simple, could be parallel
+	for id, name := range indicators {
+		data, err := fredClient.GetSeriesObservations(id)
+		if err != nil {
+			log.Printf("Failed to fetch FRED series %s: %v", id, err)
+			continue
+		}
+
+		var latestVal, latestDate string
+		var history []FredClient.Observation
+		
+		count := len(data.Observations)
+		if count > 0 {
+			latest := data.Observations[count-1]
+			latestVal = latest.Value
+			latestDate = latest.Date
+			
+			// Get last year of data approx
+			startIdx := 0
+			if count > 12 {
+				startIdx = count - 12
+			}
+			history = data.Observations[startIdx:]
+		}
+
+		results = append(results, IndicatorData{
+			ID:          id,
+			Name:        name,
+			LatestValue: latestVal,
+			LatestDate:  latestDate,
+			History:     history,
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"source":     "FRED",
+		"count":      len(results),
+		"indicators": results,
 	})
 }
 

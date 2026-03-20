@@ -35,6 +35,7 @@ services:
     build: .
     ports:
       - "${PORT:-8080}:${PORT:-8080}"
+      - "${MCP_PORT:-8081}:8081"
     environment:
       - FINNHUB_API_KEY=${FINNHUB_API_KEY}
       - POLYGON_API_KEY=${POLYGON_API_KEY}
@@ -55,6 +56,9 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=${REDIS_PORT:-6379}
       - KAFKA_BROKER=${KAFKA_BROKER:-}
+      - MCP_ENABLED=${MCP_ENABLED:-true}
+      - MCP_ADDR=${MCP_ADDR:-:8081}
+      - MCP_BASE_URL=${MCP_BASE_URL:-http://localhost:${MCP_PORT:-8081}}
     volumes:
       - ./sentAnalysis/DoggoFinBERT.onnx:/sentAnalysis/DoggoFinBERT.onnx:ro
     depends_on:

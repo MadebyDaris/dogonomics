@@ -15,6 +15,8 @@ import (
 	"github.com/MadebyDaris/dogonomics/internal/DogonomicsFetching"
 	"github.com/MadebyDaris/dogonomics/internal/NewsClient"
 	"github.com/MadebyDaris/dogonomics/internal/PolygonClient"
+	"github.com/MadebyDaris/dogonomics/internal/CommoditiesClient"
+	"github.com/MadebyDaris/dogonomics/internal/TreasuryClient"
 	"github.com/MadebyDaris/dogonomics/internal/cache"
 	"github.com/MadebyDaris/dogonomics/internal/database"
 	"github.com/MadebyDaris/dogonomics/sentAnalysis"
@@ -38,10 +40,12 @@ type Server struct {
 }
 
 type Dependencies struct {
-	Finnhub *DogonomicsFetching.Client
-	News    *NewsClient.NewsClient
-	Redis   *redis.Client
-	Kafka   *kafka.Writer
+	Finnhub     *DogonomicsFetching.Client
+	News        *NewsClient.NewsClient
+	Redis       *redis.Client
+	Kafka       *kafka.Writer
+	Treasury    *TreasuryClient.Client
+	Commodities *CommoditiesClient.Client
 }
 
 func EnabledFromEnv() bool {
@@ -58,6 +62,12 @@ func New(deps Dependencies) (*Server, error) {
 	}
 	if deps.Redis == nil {
 		deps.Redis = cache.Client
+	}
+	if deps.Treasury == nil {
+		deps.Treasury = TreasuryClient.NewClient()
+	}
+	if deps.Commodities == nil {
+		deps.Commodities = CommoditiesClient.NewClient()
 	}
 
 	addr := envOrDefault("MCP_ADDR", defaultMCPAddr)
@@ -186,6 +196,43 @@ func (s *Server) registerTools() {
 			mcp.WithString("ticker", mcp.Required(), mcp.Description("Ticker symbol, for example MSFT")),
 		),
 		s.handleGetCompanyProfileTool,
+	)
+
+	s.mcp.AddTool(
+		mcp.NewTool(
+			"get_treasury_yield_curve",
+			mcp.WithDescription("Fetch the latest US Treasury yield curve rates."),
+		),
+		s.handleGetTreasuryYieldCurveTool,
+	)
+
+	s.mcp.AddTool(
+		mcp.NewTool(
+			"get_commodity_oil",
+			mcp.WithDescription("Fetch the latest oil prices (WTI or Brent)."),
+			mcp.WithString("type", mcp.Description("Oil type: 'wti' (default) or 'brent'")),
+		),
+		s.handleGetCommodityOilTool,
+	)
+
+	s.mcp.AddTool(
+		mcp.NewTool(
+			"get_crypto_candle",
+			mcp.WithDescription("Fetch crypto candle data (OHLCV) for a symbol."),
+			mcp.WithString("symbol", mcp.Required(), mcp.Description("Crypto symbol, e.g. BINANCE:BTCUSDT")),
+			mcp.WithString("resolution", mcp.Description("Resolution: '1', '5', '15', '30', '60', 'D', 'W', 'M'")),
+			mcp.WithNumber("days", mcp.Description("Number of days to fetch (default 30)"), mcp.DefaultNumber(30)),
+		),
+		s.handleGetCryptoCandleTool,
+	)
+
+	s.mcp.AddTool(
+		mcp.NewTool(
+			"get_forex_rates",
+			mcp.WithDescription("Fetch forex rates for a base currency."),
+			mcp.WithString("base", mcp.Description("Base currency, e.g. USD (default)")),
+		),
+		s.handleGetForexRatesTool,
 	)
 }
 
@@ -390,6 +437,78 @@ func (s *Server) handleSummarizeSymbolStatePrompt(ctx context.Context, req mcp.G
 			),
 		},
 	), nil
+}
+
+func (s *Server) handleGetTreasuryYieldCurveTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	data, err := s.deps.Treasury.GetLatestYieldCurve(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return jsonToolResult(data)
+}
+
+func (s *Server) handleGetCommodityOilTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	oilType := ""
+	if args, ok := req.Params.Arguments.(map[string]any); ok {
+		oilType, _ = args["type"].(string)
+	}
+	var data *CommoditiesClient.CommodityData
+	var err error
+
+	if oilType == "brent" {
+		data, err = s.deps.Commodities.GetCrudeOilBrent(ctx)
+	} else {
+		data, err = s.deps.Commodities.GetCrudeOilWTI(ctx)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+	return jsonToolResult(data)
+}
+
+func (s *Server) handleGetCryptoCandleTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	symbol, err := req.RequireString("symbol")
+	if err != nil {
+		return nil, err
+	}
+	resolution := "D"
+	if args, ok := req.Params.Arguments.(map[string]any); ok {
+		if res, ok := args["resolution"].(string); ok && res != "" {
+			resolution = res
+		}
+	}
+
+	days := 30
+	if args, ok := req.Params.Arguments.(map[string]any); ok {
+		if d, ok := args["days"].(float64); ok {
+			days = int(d)
+		}
+	}
+	
+	now := time.Now().Unix()
+	from := now - int64(days*86400)
+
+	candle, err := s.deps.Finnhub.GetCryptoCandle(ctx, symbol, resolution, from, now)
+	if err != nil {
+		return nil, err
+	}
+	return jsonToolResult(candle)
+}
+
+func (s *Server) handleGetForexRatesTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	base := "USD"
+	if args, ok := req.Params.Arguments.(map[string]any); ok {
+		if b, ok := args["base"].(string); ok && b != "" {
+			base = b
+		}
+	}
+
+	rates, err := s.deps.Finnhub.GetForexRates(ctx, base)
+	if err != nil {
+		return nil, err
+	}
+	return jsonToolResult(rates)
 }
 
 type contextKey string
