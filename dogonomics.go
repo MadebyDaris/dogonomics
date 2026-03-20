@@ -19,8 +19,8 @@ import (
 	"github.com/MadebyDaris/dogonomics/BertInference"
 	"github.com/MadebyDaris/dogonomics/controller"
 	"github.com/MadebyDaris/dogonomics/docs"
-	"github.com/MadebyDaris/dogonomics/internal/DogonomicsFetching"
 	"github.com/MadebyDaris/dogonomics/internal/CommoditiesClient"
+	"github.com/MadebyDaris/dogonomics/internal/DogonomicsFetching"
 	"github.com/MadebyDaris/dogonomics/internal/TreasuryClient"
 	"github.com/MadebyDaris/dogonomics/internal/cache"
 	"github.com/MadebyDaris/dogonomics/internal/database"
@@ -271,7 +271,7 @@ func main() {
 
 	// Social Sentiment
 	r.GET("/social/sentiment/:symbol", controller.GetSocialSentiment)
-	
+
 	// Reddit Scraper
 	r.GET("/social/reddit/financial", controller.GetRedditFinancialNews)
 	r.GET("/social/reddit/:subreddit", controller.GetSubredditPosts)

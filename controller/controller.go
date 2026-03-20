@@ -6,8 +6,8 @@ import (
 	"log"
 	"math"
 	"net/http"
-	"strings"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/MadebyDaris/dogonomics/BertInference"
@@ -1302,7 +1302,7 @@ func GetDogonomicsAdvice(c *gin.Context) {
 
 	type ScoreComponent struct {
 		Name    string  `json:"name"`
-		Score   float64 `json:"score"`   // -100 to +100
+		Score   float64 `json:"score"` // -100 to +100
 		Weight  float64 `json:"weight"`
 		Signal  string  `json:"signal"`
 		Details string  `json:"details"`
@@ -1706,7 +1706,7 @@ func GetCryptoQuotes(c *gin.Context) {
 	for _, m := range markets {
 		// Calculate open approx
 		open := m.CurrentPrice - m.PriceChange24h
-		
+
 		quotes = append(quotes, CryptoQuote{
 			Symbol:        strings.ToUpper(m.Symbol),
 			DisplaySymbol: strings.ToUpper(m.Symbol) + "/USDT", // Keep format expected by frontend
@@ -1745,15 +1745,15 @@ func GetEconomicIndicators(c *gin.Context) {
 	}
 
 	type IndicatorData struct {
-		ID          string                  `json:"id"`
-		Name        string                  `json:"name"`
-		LatestValue string                  `json:"latest_value"`
-		LatestDate  string                  `json:"latest_date"`
+		ID          string                   `json:"id"`
+		Name        string                   `json:"name"`
+		LatestValue string                   `json:"latest_value"`
+		LatestDate  string                   `json:"latest_date"`
 		History     []FredClient.Observation `json:"history"`
 	}
 
 	results := make([]IndicatorData, 0)
-	
+
 	// Fetch sequentially to be simple, could be parallel
 	for id, name := range indicators {
 		data, err := fredClient.GetSeriesObservations(id)
@@ -1764,13 +1764,13 @@ func GetEconomicIndicators(c *gin.Context) {
 
 		var latestVal, latestDate string
 		var history []FredClient.Observation
-		
+
 		count := len(data.Observations)
 		if count > 0 {
 			latest := data.Observations[count-1]
 			latestVal = latest.Value
 			latestDate = latest.Date
-			
+
 			// Get last year of data approx
 			startIdx := 0
 			if count > 12 {
@@ -1949,10 +1949,10 @@ func GetSocialSentiment(c *gin.Context) {
 		"symbol":         symbol,
 		"articles_count": len(analysed),
 		"aggregate": gin.H{
-			"label":            overallLabel,
-			"average_score":    avgScore,
+			"label":              overallLabel,
+			"average_score":      avgScore,
 			"average_confidence": avgConf,
-			"sentiment_counts": counts,
+			"sentiment_counts":   counts,
 		},
 		"articles": analysed,
 	})
