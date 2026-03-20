@@ -4,7 +4,7 @@ import 'package:Dogonomics/widgets/infoTooltip.dart';
 import 'package:Dogonomics/pages/chartDetailPage.dart';
 import 'package:Dogonomics/pages/newsFeedPage.dart';
 import 'package:Dogonomics/backend/providers.dart';
-import 'package:Dogonomics/widgets/copilot_sidebar_widget.dart';
+import 'package:Dogonomics/widgets/doggo_sidebar_widget.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 

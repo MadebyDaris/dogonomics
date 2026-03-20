@@ -169,6 +169,50 @@ class NewsItem {
   }
 }
 
+class RedditPost {
+  final String id;
+  final String title;
+  final String selfText;
+  final String author;
+  final String url;
+  final String permalink;
+  final int upvotes;
+  final int comments;
+  final String subreddit;
+  final DateTime? createdAt;
+
+  RedditPost({
+    required this.id,
+    required this.title,
+    required this.selfText,
+    required this.author,
+    required this.url,
+    required this.permalink,
+    required this.upvotes,
+    required this.comments,
+    required this.subreddit,
+    this.createdAt,
+  });
+
+  factory RedditPost.fromJson(Map<String, dynamic> json) {
+    final createdUtc = (json['created_utc'] as num?)?.toDouble();
+    return RedditPost(
+      id: json['id']?.toString() ?? '',
+      title: json['title']?.toString() ?? 'Untitled post',
+      selfText: json['selftext']?.toString() ?? '',
+      author: json['author']?.toString() ?? 'unknown',
+      url: json['url']?.toString() ?? '',
+      permalink: json['permalink']?.toString() ?? '',
+      upvotes: (json['ups'] as num?)?.toInt() ?? 0,
+      comments: (json['num_comments'] as num?)?.toInt() ?? 0,
+      subreddit: json['subreddit']?.toString() ?? '',
+      createdAt: createdUtc != null
+          ? DateTime.fromMillisecondsSinceEpoch((createdUtc * 1000).toInt(), isUtc: true)
+          : null,
+    );
+  }
+}
+
 class BERTSentiment {
   final String label;
   final double confidence;
@@ -851,6 +895,78 @@ class FinancialIndicatorsResponse {
   }
 }
 
+// ── Economic Indicators Models ──
+
+class Observation {
+  final DateTime date;
+  final double? value;
+
+  Observation({required this.date, this.value});
+
+  factory Observation.fromJson(Map<String, dynamic> json) {
+    return Observation(
+      date: json['date'] is DateTime
+          ? json['date']
+          : DateTime.tryParse(json['date'] ?? '2026-01-01') ?? DateTime.now(),
+      value: json['value'] != null ? (json['value'] as num).toDouble() : null,
+    );
+  }
+}
+
+class IndicatorData {
+  final String id;
+  final String name;
+  final double? latestValue;
+  final DateTime? latestDate;
+  final List<Observation> history;
+
+  IndicatorData({
+    required this.id,
+    required this.name,
+    this.latestValue,
+    this.latestDate,
+    this.history = const [],
+  });
+
+  factory IndicatorData.fromJson(Map<String, dynamic> json) {
+    return IndicatorData(
+      id: json['id'] ?? '',
+      name: json['name'] ?? '',
+      latestValue: json['latest_value'] != null ? (json['latest_value'] as num).toDouble() : null,
+      latestDate: json['latest_date'] is DateTime
+          ? json['latest_date']
+          : json['latest_date'] != null
+              ? DateTime.tryParse(json['latest_date'])
+              : null,
+      history: (json['history'] as List?)
+          ?.map((e) => Observation.fromJson(e))
+          .toList() ?? [],
+    );
+  }
+}
+
+class EconomicIndicatorResponse {
+  final String source;
+  final int count;
+  final List<IndicatorData> indicators;
+
+  EconomicIndicatorResponse({
+    required this.source,
+    required this.count,
+    required this.indicators,
+  });
+
+  factory EconomicIndicatorResponse.fromJson(Map<String, dynamic> json) {
+    return EconomicIndicatorResponse(
+      source: json['source'] ?? '',
+      count: json['count'] ?? 0,
+      indicators: (json['indicators'] as List?)
+          ?.map((e) => IndicatorData.fromJson(e))
+          .toList() ?? [],
+    );
+  }
+}
+
 // ── Dogonomics Advice Models ──
 
 class AdviceComponent {
@@ -1214,7 +1330,7 @@ class DogonomicsAPI {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final requests = data['requests'] as List? ?? (data is List ? data : []);
-        return (requests is List ? requests : [])
+        return requests
             .map((e) => ApiRequestLog.fromJson(e))
             .toList();
       } else {
@@ -1232,7 +1348,7 @@ class DogonomicsAPI {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final items = data['symbols'] as List? ?? (data is List ? data : []);
-        return (items is List ? items : [])
+        return items
             .map((e) => SymbolRequestCount.fromJson(e))
             .toList();
       } else {
@@ -1319,6 +1435,44 @@ class DogonomicsAPI {
     }
   }
 
+  /// Fetch aggregated financial Reddit posts.
+  static Future<List<RedditPost>> fetchRedditFinancialNews({int limit = 10}) async {
+    try {
+      final response = await ApiClient.get('/social/reddit/financial?limit=$limit');
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final posts = data is Map<String, dynamic>
+            ? (data['posts'] as List? ?? <dynamic>[])
+            : (data is List ? data : <dynamic>[]);
+        return posts
+            .whereType<Map<String, dynamic>>()
+            .map((e) => RedditPost.fromJson(e))
+            .toList();
+      }
+      throw Exception('Reddit feed failed: ${response.statusCode}');
+    } catch (e) {
+      throw Exception('Reddit feed error: $e');
+    }
+  }
+
+  /// Fetch posts from a specific subreddit.
+  static Future<List<RedditPost>> fetchSubredditPosts(String subreddit, {int limit = 10}) async {
+    try {
+      final response = await ApiClient.get('/social/reddit/$subreddit?limit=$limit');
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final posts = data is List ? data : <dynamic>[];
+        return posts
+            .whereType<Map<String, dynamic>>()
+            .map((e) => RedditPost.fromJson(e))
+            .toList();
+      }
+      throw Exception('Subreddit feed failed: ${response.statusCode}');
+    } catch (e) {
+      throw Exception('Subreddit feed error: $e');
+    }
+  }
+
   // ── Financial Indicators & Advice ──
 
   /// Fetch comprehensive financial indicators for a symbol.
@@ -1349,6 +1503,22 @@ class DogonomicsAPI {
       }
     } catch (e) {
       throw Exception('Advice error: $e');
+    }
+  }
+
+  // ── Economic Indicators ──
+
+  /// Fetch economic indicators.
+  static Future<EconomicIndicatorResponse> fetchEconomicIndicators() async {
+    try {
+      final response = await ApiClient.get('/economy/indicators');
+      if (response.statusCode == 200) {
+        return EconomicIndicatorResponse.fromJson(json.decode(response.body));
+      } else {
+        throw Exception('Economic indicators failed: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Economic indicators error: $e');
     }
   }
 

@@ -55,6 +55,10 @@ class ApiClient {
       'Content-Type': 'application/json',
     };
 
+    if (ApiConfig.apiKey.isNotEmpty) {
+      headers['X-API-Key'] = ApiConfig.apiKey;
+    }
+
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {

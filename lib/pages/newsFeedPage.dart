@@ -2,11 +2,14 @@ import 'dart:async';
 import 'package:Dogonomics/backend/dogonomicsApi.dart';
 import 'package:Dogonomics/backend/providers.dart';
 import 'package:Dogonomics/utils/constant.dart';
-import 'package:Dogonomics/widgets/copilot_sidebar_widget.dart';
+import 'package:Dogonomics/widgets/doggo_sidebar_widget.dart';
 import 'package:Dogonomics/widgets/explain_tooltip_widget.dart';
 import 'package:Dogonomics/widgets/stockDetailsWidgets.dart';
 import 'package:Dogonomics/widgets/finbertInferenceDialog.dart';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+import 'package:Dogonomics/widgets/doggo_inline_insight.dart';
 
 class NewsFeedPage extends StatefulWidget {
   final String? symbol; // optional symbol filter
@@ -27,18 +30,22 @@ class _NewsFeedPageState extends State<NewsFeedPage> {
   // Search
   final TextEditingController _searchController = TextEditingController();
   Timer? _debounce;
-  bool _isSearching = false;
   String _searchQuery = '';
 
   // Sentiment toggle
   bool _showSentimentAnalyzed = false;
   NewsWithSentimentResponse? _sentimentResponse;
   bool _isLoadingSentiment = false;
+  List<RedditPost> _redditPosts = [];
+  bool _isLoadingReddit = false;
 
   @override
   void initState() {
     super.initState();
     _loadNews();
+    if (widget.symbol == null) {
+      _loadRedditPulse();
+    }
   }
 
   @override
@@ -84,7 +91,6 @@ class _NewsFeedPageState extends State<NewsFeedPage> {
       if (query.trim().isEmpty) {
         setState(() {
           _searchQuery = '';
-          _isSearching = false;
         });
         _loadNews();
       } else {
@@ -95,7 +101,6 @@ class _NewsFeedPageState extends State<NewsFeedPage> {
 
   Future<void> _performSearch(String query) async {
     setState(() {
-      _isSearching = true;
       _searchQuery = query;
       isLoading = true;
       error = null;
@@ -144,6 +149,35 @@ class _NewsFeedPageState extends State<NewsFeedPage> {
           ),
         );
       }
+    }
+  }
+
+  Future<void> _loadRedditPulse() async {
+    if (widget.symbol != null) return;
+
+    setState(() {
+      _isLoadingReddit = true;
+    });
+
+    try {
+      final posts = await DogonomicsAPI.fetchRedditFinancialNews(limit: 8);
+      if (!mounted) return;
+      setState(() {
+        _redditPosts = posts;
+        _isLoadingReddit = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isLoadingReddit = false;
+      });
+    }
+  }
+
+  Future<void> _refreshRegularMode() async {
+    await _loadNews();
+    if (widget.symbol == null) {
+      await _loadRedditPulse();
     }
   }
 
@@ -227,6 +261,12 @@ class _NewsFeedPageState extends State<NewsFeedPage> {
               ),
             ),
           ),
+          
+          if (widget.symbol == null)
+            const DoggoInlineInsightWidget(
+              context: 'News',
+              prompt: 'Please summarize the key current financial headlines for the day into 3 bullet points.',
+            ),
 
           // Sentiment toggle (only for general news, not symbol-specific)
           if (widget.symbol == null)
@@ -260,6 +300,9 @@ class _NewsFeedPageState extends State<NewsFeedPage> {
           // Aggregate sentiment banner
           if (_showSentimentAnalyzed && _sentimentResponse != null)
             _buildAggregateBanner(_sentimentResponse!.aggregateSentiment),
+
+          if (widget.symbol == null)
+            _buildRedditPulseSection(),
 
           // News list
           Expanded(
@@ -330,7 +373,9 @@ class _NewsFeedPageState extends State<NewsFeedPage> {
       return _buildEmpty();
     }
     return RefreshIndicator(
-      onRefresh: _searchQuery.isNotEmpty ? () => _performSearch(_searchQuery) : _loadNews,
+      onRefresh: _searchQuery.isNotEmpty
+          ? () => _performSearch(_searchQuery)
+          : _refreshRegularMode,
       child: ListView.separated(
         itemCount: news.length,
         separatorBuilder: (_, __) => const SizedBox(height: 12),
@@ -339,6 +384,118 @@ class _NewsFeedPageState extends State<NewsFeedPage> {
         },
       ),
     );
+  }
+
+  Widget _buildRedditPulseSection() {
+    if (_isLoadingReddit) {
+      return const Padding(
+        padding: EdgeInsets.fromLTRB(16, 4, 16, 8),
+        child: LinearProgressIndicator(minHeight: 2, color: ACCENT_GREEN),
+      );
+    }
+
+    if (_redditPosts.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: CARD_BACKGROUND,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: BORDER_COLOR),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.forum_outlined, color: ACCENT_GREEN_LIGHT, size: 18),
+              const SizedBox(width: 8),
+              Text(
+                'Reddit Pulse',
+                style: BODY_PRIMARY.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const Spacer(),
+              Text(
+                '${_redditPosts.length} posts',
+                style: CAPTION_TEXT,
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ..._redditPosts.take(3).map(_buildRedditPulseCard),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRedditPulseCard(RedditPost post) {
+    final subtitle = post.selfText.trim().isNotEmpty
+        ? post.selfText.trim()
+        : 'u/${post.author} in r/${post.subreddit}';
+
+    return InkWell(
+      onTap: () => _openRedditPost(post),
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 6,
+              height: 38,
+              decoration: BoxDecoration(
+                color: ACCENT_GREEN.withOpacity(0.5),
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    post.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: BODY_PRIMARY.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: CAPTION_TEXT,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text('Up ${post.upvotes}', style: CAPTION_TEXT),
+                Text('Cmts ${post.comments}', style: CAPTION_TEXT),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openRedditPost(RedditPost post) async {
+    final String target = post.url.trim().isNotEmpty
+        ? post.url.trim()
+        : 'https://www.reddit.com${post.permalink}';
+    final uri = Uri.tryParse(target);
+    if (uri == null) return;
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
   }
 
   Widget _buildAggregateBanner(AggregateSentiment agg) {

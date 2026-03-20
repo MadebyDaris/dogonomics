@@ -3,13 +3,15 @@ import 'package:Dogonomics/pages/stockview.dart';
 import 'package:Dogonomics/pages/commoditiesPage.dart';
 import 'package:Dogonomics/pages/treasuriesPage.dart';
 import 'package:Dogonomics/pages/forexCryptoPage.dart';
+import 'package:Dogonomics/pages/economicIndicatorsPage.dart';
 import 'package:Dogonomics/pages/walletPage.dart';
 import 'package:Dogonomics/pages/newsFeedPage.dart';
+import 'package:Dogonomics/pages/dogonomicsAdvicePage.dart';
 import 'package:Dogonomics/backend/providers.dart';
 import 'package:Dogonomics/utils/constant.dart';
 import 'package:Dogonomics/utils/tickerData.dart';
 import 'package:Dogonomics/utils/walletData.dart';
-import 'package:Dogonomics/widgets/copilot_sidebar_widget.dart';
+import 'package:Dogonomics/widgets/doggo_sidebar_widget.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -31,7 +33,7 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
   final RouteProvider _routeProvider = RouteProvider();
   final MetricExplanationProvider _explanationProvider = MetricExplanationProvider();
 
-  final tabs = ['Stocks', 'News', 'Commodities', 'Treasuries', 'Forex/Crypto'];
+  final tabs = ['Stocks', 'News', 'Commodities', 'Treasuries', 'Forex/Crypto', 'Economy'];
 
   String _routeForTabIndex(int index) {
     switch (index) {
@@ -45,6 +47,8 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
         return '/treasuries';
       case 4:
         return '/forex_crypto';
+      case 5:
+        return '/economy';
       default:
         return '/frontpage';
     }
@@ -59,82 +63,75 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: PreferredSize(
-      preferredSize: const Size.fromHeight(148.0),
-      child: AppBar(
-        backgroundColor: MAINGREY,
-        title: Container(
-            padding: const EdgeInsets.only(top: 3, bottom: 0),
-            margin: const EdgeInsets.only(left: 15, right: 20, top: 20, bottom: 20),
-            child:
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-              const Image(
-                image: AssetImage("assets/images/dogonomicsLogo.png"),
-                width: 90,
-                height: 90,
+        preferredSize: const Size.fromHeight(110.0),
+        child: AppBar(
+          backgroundColor: MAINGREY,
+          elevation: 0,
+          title: Row(
+            children: [
+              Image.asset("assets/images/dogonomicsLogo.png", height: 40),
+              const SizedBox(width: 12),
+              const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'DOGONOMICS',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'Liberation Sans',
+                      letterSpacing: 1.2,
+                      color: Colors.white,
+                    ),
+                  ),
+                  Text(
+                    'ASSISTANT',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w400,
+                      color: ACCENT_GREEN,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                ],
               ),
-              const Flexible(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'DOGONOMICS',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'Liberation Sans',
-                        letterSpacing: 1.5,
-                        color: Colors.white,
-                      ),
-                    ),
-                    Text(
-                      'ASSISTANT',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w400,
-                        color: Color(0xFF66BB6A),
-                        letterSpacing: 2.0,
-                      ),
-                    ),
-                  ],
-                ),
-              )
-        ])),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.wallet),
-            tooltip: 'Total Wallet',
-            onPressed: () => _openWallet(context),
+            ],
           ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Logout',
-            onPressed: () => _logout(context),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.wallet),
+              tooltip: 'Total Wallet',
+              onPressed: () => _openWallet(context),
+            ),
+            IconButton(
+              icon: const Icon(Icons.logout),
+              tooltip: 'Logout',
+              onPressed: () => _logout(context),
+            ),
+          ],
+          bottom: TabBar(
+            dividerHeight: 0,
+            controller: _tabController,
+            isScrollable: true,
+            indicatorColor: ACCENT_GREEN,
+            indicatorWeight: 3,
+            indicatorSize: TabBarIndicatorSize.label,
+            labelColor: Colors.white,
+            unselectedLabelColor: const Color(0xFF757575),
+            labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            unselectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w400),
+            tabs: const [
+              Tab(text: 'Stocks'),
+              Tab(text: 'News'),
+              Tab(text: 'Commodities'),
+              Tab(text: 'Treasuries'),
+              Tab(text: 'Forex/Crypto'),
+              Tab(text: 'Economy'),
+            ],
           ),
-        ],
-      bottom: TabBar(
-        dividerHeight: 0,
-        controller: _tabController,
-        isScrollable: true,
-        indicatorColor: const Color(0xFF4CAF50),
-        indicatorWeight: 3,
-        indicatorSize: TabBarIndicatorSize.label,
-        labelColor: Colors.white,
-        unselectedLabelColor: const Color(0xFF757575),
-        labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-        unselectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w400),
-        tabs: const [
-          Tab(text: 'Stocks'),
-          Tab(text: 'News'),
-          Tab(text: 'Commodities'),
-          Tab(text: 'Treasuries'),
-          Tab(text: 'Forex/Crypto'),
-        ],
-      ),
         ),
       ),
+
       body: SidebarScaffold(
         currentRoute: _routeForTabIndex(_tabController.index),
         routeProvider: _routeProvider,
@@ -160,6 +157,8 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
                   );
                 },
               );
+            } else if (tab == 'Economy') {
+              return EconomicIndicatorsPage();
             } else {
               return Center(child: Text('Coming Soon...', style: TextStyle(color: Colors.grey)));
             }

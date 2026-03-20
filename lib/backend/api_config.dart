@@ -14,6 +14,14 @@ class ApiConfig {
     defaultValue: 'http://192.168.1.148:8080',
   );
 
+  /// Shared API key sent in X-API-Key header.
+  /// Example:
+  ///   flutter run --dart-define=API_KEY=your_app_api_key
+  static const String apiKey = String.fromEnvironment(
+    'API_KEY',
+    defaultValue: '',
+  );
+
   /// WebSocket base URL (auto-derived from baseUrl).
   /// Converts http:// → ws:// and https:// → wss://
   static String get wsBaseUrl {

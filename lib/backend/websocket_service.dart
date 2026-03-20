@@ -19,7 +19,6 @@ class WebSocketService {
   int _reconnectAttempts = 0;
   static const int _maxReconnectAttempts = 10;
   bool _disposed = false;
-  String? _currentPath;
 
   /// Connect to real-time quote updates for [symbol].
   /// Returns a broadcast stream of parsed quote JSON maps.
@@ -37,7 +36,6 @@ class WebSocketService {
 
   /// Raw connection returning parsed JSON maps.
   Stream<Map<String, dynamic>> _connect(String path) {
-    _currentPath = path;
     _disposed = false;
     _controller = StreamController<Map<String, dynamic>>.broadcast(
       onCancel: () {
@@ -57,14 +55,19 @@ class WebSocketService {
 
     try {
       // Get Firebase token for WebSocket auth
-      String tokenParam = '';
+      final queryParams = <String, String>{};
       final token = await ApiClient.getToken();
       if (token != null) {
-        tokenParam = '?token=$token';
+        queryParams['token'] = token;
+      }
+      if (ApiConfig.apiKey.isNotEmpty) {
+        queryParams['api_key'] = ApiConfig.apiKey;
       }
 
-      final wsUrl = '${ApiConfig.wsBaseUrl}$path$tokenParam';
-      _channel = WebSocketChannel.connect(Uri.parse(wsUrl));
+      final wsUri = Uri.parse('${ApiConfig.wsBaseUrl}$path').replace(
+        queryParameters: queryParams.isEmpty ? null : queryParams,
+      );
+      _channel = WebSocketChannel.connect(wsUri);
 
       _reconnectAttempts = 0; // Reset on successful connection
 

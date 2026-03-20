@@ -5,9 +5,9 @@ import 'package:flutter/material.dart';
 import '../backend/gemini_service.dart';
 import '../backend/providers.dart';
 
-/// Copilot sidebar - right-side help and guidance panel.
-/// Provides context-aware tips, concept explanations, and integrated copilot chat.
-class CopilotSidebarWidget extends StatefulWidget {
+/// Doggo sidebar - right-side help and guidance panel.
+/// Provides context-aware tips, concept explanations, and integrated Doggo chat.
+class DoggoSidebarWidget extends StatefulWidget {
   final String currentRoute;
   final String? currentSymbol;
   final Map<String, dynamic> contextData;
@@ -15,7 +15,7 @@ class CopilotSidebarWidget extends StatefulWidget {
   final bool isVisible;
   final VoidCallback? onClose;
 
-  const CopilotSidebarWidget({
+  const DoggoSidebarWidget({
     Key? key,
     required this.currentRoute,
     this.currentSymbol,
@@ -26,10 +26,10 @@ class CopilotSidebarWidget extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  State<CopilotSidebarWidget> createState() => _CopilotSidebarWidgetState();
+  State<DoggoSidebarWidget> createState() => _DoggoSidebarWidgetState();
 }
 
-class _CopilotSidebarWidgetState extends State<CopilotSidebarWidget>
+class _DoggoSidebarWidgetState extends State<DoggoSidebarWidget>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
@@ -38,7 +38,7 @@ class _CopilotSidebarWidgetState extends State<CopilotSidebarWidget>
   String? _conceptExplanation;
   bool _isLoadingExplanation = false;
   bool _isLoadingChat = false;
-  final List<_CopilotMessage> _messages = [];
+  final List<_DoggoMessage> _messages = [];
 
   @override
   void initState() {
@@ -89,12 +89,12 @@ class _CopilotSidebarWidgetState extends State<CopilotSidebarWidget>
     }
   }
 
-  Future<void> _sendCopilotMessage([String? quickPrompt]) async {
+  Future<void> _sendDoggoMessage([String? quickPrompt]) async {
     final text = (quickPrompt ?? _chatController.text).trim();
     if (text.isEmpty || _isLoadingChat) return;
 
     setState(() {
-      _messages.add(_CopilotMessage.user(text));
+      _messages.add(_DoggoMessage.user(text));
       _isLoadingChat = true;
     });
 
@@ -113,14 +113,14 @@ class _CopilotSidebarWidgetState extends State<CopilotSidebarWidget>
       );
       if (!mounted) return;
       setState(() {
-        _messages.add(_CopilotMessage.assistant(response));
+        _messages.add(_DoggoMessage.assistant(response));
         _isLoadingChat = false;
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _messages.add(
-          _CopilotMessage.assistant(
+          _DoggoMessage.assistant(
             'Unable to generate a response right now. Please try again.',
             isError: true,
           ),
@@ -174,7 +174,7 @@ class _CopilotSidebarWidgetState extends State<CopilotSidebarWidget>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'Copilot',
+                        'Doggo',
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
@@ -197,7 +197,7 @@ class _CopilotSidebarWidgetState extends State<CopilotSidebarWidget>
                   IconButton(
                     onPressed: widget.onClose,
                     icon: const Icon(Icons.close, size: 16, color: Color(0xFF9E9E9E)),
-                    tooltip: 'Close Copilot',
+                    tooltip: 'Close Doggo',
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints.tightFor(width: 24, height: 24),
                   ),
@@ -212,7 +212,7 @@ class _CopilotSidebarWidgetState extends State<CopilotSidebarWidget>
             tabs: const [
               Tab(text: 'Tips', icon: Icon(Icons.lightbulb_outline, size: 16)),
               Tab(text: 'Learn', icon: Icon(Icons.school_outlined, size: 16)),
-              Tab(text: 'Copilot', icon: Icon(Icons.chat_bubble_outline, size: 16)),
+              Tab(text: 'Doggo', icon: Icon(Icons.chat_bubble_outline, size: 16)),
             ],
           ),
           Expanded(
@@ -221,7 +221,7 @@ class _CopilotSidebarWidgetState extends State<CopilotSidebarWidget>
               children: [
                 _buildTipsTab(),
                 _buildLearnTab(),
-                _buildCopilotTab(),
+                _buildDoggoTab(),
               ],
             ),
           ),
@@ -435,13 +435,13 @@ class _CopilotSidebarWidgetState extends State<CopilotSidebarWidget>
     );
   }
 
-  Widget _buildCopilotTab() {
+  Widget _buildDoggoTab() {
     return Column(
       children: [
         _buildQuickPrompts(),
         Expanded(
           child: _messages.isEmpty
-              ? _buildCopilotEmptyState()
+              ? _buildDoggoEmptyState()
               : ListView.builder(
                   padding: const EdgeInsets.all(12),
                   itemCount: _messages.length,
@@ -486,7 +486,7 @@ class _CopilotSidebarWidgetState extends State<CopilotSidebarWidget>
                   ),
                   backgroundColor: const Color(0xFF262626),
                   side: const BorderSide(color: Color(0xFF424242), width: 0.5),
-                  onPressed: () => _sendCopilotMessage(prompt),
+                  onPressed: () => _sendDoggoMessage(prompt),
                 ),
               ),
             )
@@ -495,7 +495,7 @@ class _CopilotSidebarWidgetState extends State<CopilotSidebarWidget>
     );
   }
 
-  Widget _buildCopilotEmptyState() {
+  Widget _buildDoggoEmptyState() {
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -503,7 +503,7 @@ class _CopilotSidebarWidgetState extends State<CopilotSidebarWidget>
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const Text(
-            'Ask Copilot about the current screen',
+            'Ask Doggo about the current screen',
             style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 10),
@@ -523,7 +523,7 @@ class _CopilotSidebarWidgetState extends State<CopilotSidebarWidget>
               border: Border.all(color: const Color(0xFF424242), width: 0.5),
             ),
             child: const Text(
-              'Try: Why did it spike today?\nCopilot automatically uses active symbol and route context.',
+              'Try: Why did it spike today?\nDoggo automatically uses active symbol and route context.',
               style: TextStyle(color: Color(0xFFB0B0B0), fontSize: 11, height: 1.5),
             ),
           ),
@@ -532,8 +532,8 @@ class _CopilotSidebarWidgetState extends State<CopilotSidebarWidget>
     );
   }
 
-  Widget _buildMessageBubble(_CopilotMessage message) {
-    final isUser = message.role == _CopilotRole.user;
+  Widget _buildMessageBubble(_DoggoMessage message) {
+    final isUser = message.role == _DoggoRole.user;
     final bg = isUser ? const Color(0xFF1B5E20) : const Color(0xFF262626);
     final textColor = isUser ? Colors.white : const Color(0xFFE0E0E0);
 
@@ -574,9 +574,9 @@ class _CopilotSidebarWidgetState extends State<CopilotSidebarWidget>
               maxLines: 3,
               style: const TextStyle(color: Colors.white, fontSize: 12),
               textInputAction: TextInputAction.send,
-              onSubmitted: (_) => _sendCopilotMessage(),
+              onSubmitted: (_) => _sendDoggoMessage(),
               decoration: InputDecoration(
-                hintText: 'Ask Copilot...',
+                hintText: 'Ask Doggo...',
                 hintStyle: const TextStyle(color: Color(0xFF757575), fontSize: 12),
                 filled: true,
                 fillColor: const Color(0xFF262626),
@@ -594,7 +594,7 @@ class _CopilotSidebarWidgetState extends State<CopilotSidebarWidget>
           ),
           const SizedBox(width: 8),
           IconButton(
-            onPressed: _isLoadingChat ? null : _sendCopilotMessage,
+            onPressed: _isLoadingChat ? null : _sendDoggoMessage,
             icon: const Icon(Icons.send_rounded),
             color: const Color(0xFF66BB6A),
             tooltip: 'Send',
@@ -611,7 +611,7 @@ class _CopilotSidebarWidgetState extends State<CopilotSidebarWidget>
           'Use Explain This tooltips to understand complex metrics.',
           'Check the sentiment tab for AI analysis of recent news.',
           'Compare this stock to industry averages.',
-          'Ask Copilot for context-aware insights before taking action.',
+          'Ask Doggo for context-aware insights before taking action.',
         ];
       case '/frontpage':
         return [
@@ -636,34 +636,34 @@ class _CopilotSidebarWidgetState extends State<CopilotSidebarWidget>
         ];
       default:
         return [
-          'Use Copilot for page-specific market guidance.',
+          'Use Doggo for page-specific market guidance.',
           'Use Explain This icons to clarify financial terms and metrics.',
-          'Ask about stocks or market concepts in Copilot chat.',
+          'Ask about stocks or market concepts in Doggo chat.',
           'Check the ticker tape for market sentiment.',
         ];
     }
   }
 }
 
-enum _CopilotRole { user, assistant }
+enum _DoggoRole { user, assistant }
 
-class _CopilotMessage {
-  final _CopilotRole role;
+class _DoggoMessage {
+  final _DoggoRole role;
   final String text;
   final bool isError;
 
-  const _CopilotMessage({
+  const _DoggoMessage({
     required this.role,
     required this.text,
     this.isError = false,
   });
 
-  factory _CopilotMessage.user(String text) {
-    return _CopilotMessage(role: _CopilotRole.user, text: text);
+  factory _DoggoMessage.user(String text) {
+    return _DoggoMessage(role: _DoggoRole.user, text: text);
   }
 
-  factory _CopilotMessage.assistant(String text, {bool isError = false}) {
-    return _CopilotMessage(role: _CopilotRole.assistant, text: text, isError: isError);
+  factory _DoggoMessage.assistant(String text, {bool isError = false}) {
+    return _DoggoMessage(role: _DoggoRole.assistant, text: text, isError: isError);
   }
 }
 
@@ -695,7 +695,12 @@ class SidebarScaffold extends StatefulWidget {
 }
 
 class _SidebarScaffoldState extends State<SidebarScaffold> {
-  bool _isOpen = true;
+  bool _isOpen = false;
+  
+  // Floating FAB position
+  double _fabX = 20;
+  double _fabY = 60; // offset from top or bottom
+  bool _positionInitialized = false;
 
   @override
   void initState() {
@@ -724,81 +729,47 @@ class _SidebarScaffoldState extends State<SidebarScaffold> {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    final isTablet = screenWidth > 600;
+    final screenHeight = MediaQuery.of(context).size.height;
+    
+    if (!_positionInitialized) {
+      _fabX = screenWidth - 70; // 70px from right
+      _fabY = screenHeight - 120; // 120px from bottom
+      _positionInitialized = true;
+    }
 
     if (!widget.showSidebar) {
       return widget.body;
     }
 
-    if (isTablet) {
-      return Row(
-        children: [
-          Expanded(child: widget.body),
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 220),
-            width: _isOpen ? 320 : 54,
-            decoration: const BoxDecoration(
-              color: Color(0xFF1A1A1A),
-              border: Border(left: BorderSide(color: Color(0xFF313131), width: 1)),
-            ),
-            child: _isOpen
-                ? Column(
-                    children: [
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: IconButton(
-                          onPressed: () => setState(() => _isOpen = false),
-                          icon: const Icon(Icons.chevron_right, color: Color(0xFF9E9E9E)),
-                          tooltip: 'Collapse Copilot',
-                        ),
-                      ),
-                      Expanded(
-                        child: CopilotSidebarWidget(
-                          currentRoute: widget.currentRoute,
-                          currentSymbol: widget.currentSymbol,
-                          contextData: widget.contextData,
-                          explanationProvider: widget.explanationProvider,
-                          isVisible: true,
-                        ),
-                      ),
-                    ],
-                  )
-                : Center(
-                    child: IconButton(
-                      onPressed: () => setState(() => _isOpen = true),
-                      icon: const Icon(Icons.smart_toy_outlined, color: Color(0xFF66BB6A)),
-                      tooltip: 'Open Copilot',
-                    ),
-                  ),
-          ),
-        ],
-      );
-    }
-
-    final panelWidth = math.min(320.0, screenWidth * 0.9);
+    // Determine panel width (max 400px or 90% of screen)
+    final panelWidth = math.min(400.0, screenWidth * 0.9);
 
     return Stack(
       children: [
         widget.body,
+        
+        // Dark backdrop when open
         if (_isOpen)
           Positioned.fill(
             child: GestureDetector(
               onTap: () => setState(() => _isOpen = false),
-              child: Container(color: Colors.black.withOpacity(0.25)),
+              child: Container(color: Colors.black.withOpacity(0.4)),
             ),
           ),
+          
+        // The side panel itself
         AnimatedPositioned(
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOut,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOutCubic,
           top: 0,
           bottom: 0,
           right: _isOpen ? 0 : -panelWidth,
           width: panelWidth,
           child: Material(
             color: const Color(0xFF1A1A1A),
-            elevation: 8,
+            elevation: 16,
             child: SafeArea(
-              child: CopilotSidebarWidget(
+              child: DoggoSidebarWidget(
                 currentRoute: widget.currentRoute,
                 currentSymbol: widget.currentSymbol,
                 contextData: widget.contextData,
@@ -809,18 +780,33 @@ class _SidebarScaffoldState extends State<SidebarScaffold> {
             ),
           ),
         ),
-        Positioned(
-          top: 12,
-          right: 8,
-          child: FloatingActionButton.small(
-            heroTag: 'copilot_toggle_${widget.currentRoute}',
-            backgroundColor: const Color(0xFF2E7D32),
-            foregroundColor: Colors.white,
-            onPressed: () => setState(() => _isOpen = !_isOpen),
-            tooltip: _isOpen ? 'Close Copilot' : 'Open Copilot',
-            child: Icon(_isOpen ? Icons.close : Icons.smart_toy_outlined),
+
+        // Floating Draggable Doggo Avatar
+        if (!_isOpen)
+          Positioned(
+            left: _fabX,
+            top: _fabY,
+            child: GestureDetector(
+              onPanUpdate: (feedback) {
+                setState(() {
+                  _fabX += feedback.delta.dx;
+                  _fabY += feedback.delta.dy;
+                  // Clamp to screen bounds
+                  _fabX = math.max(0, math.min(_fabX, screenWidth - 56));
+                  _fabY = math.max(0, math.min(_fabY, screenHeight - 56));
+                });
+              },
+              child: FloatingActionButton(
+                heroTag: 'Doggo_toggle_${widget.currentRoute}',
+                backgroundColor: const Color(0xFF2E7D32),
+                foregroundColor: Colors.white,
+                elevation: 8,
+                onPressed: () => setState(() => _isOpen = true),
+                tooltip: 'Ask Doggo',
+                child: const Icon(Icons.smart_toy_outlined, size: 28),
+              ),
+            ),
           ),
-        ),
       ],
     );
   }

@@ -3,7 +3,7 @@ import 'package:fl_chart/fl_chart.dart';
 import '../backend/dogonomicsApi.dart';
 import '../backend/providers.dart';
 import '../utils/constant.dart';
-import '../widgets/copilot_sidebar_widget.dart';
+import '../widgets/doggo_sidebar_widget.dart';
 import '../widgets/explain_tooltip_widget.dart';
 import '../widgets/infoTooltip.dart';
 

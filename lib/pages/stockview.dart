@@ -5,14 +5,18 @@ import 'package:Dogonomics/pages/newsFeedPage.dart';
 import 'package:Dogonomics/pages/portfolioAnalysisPage.dart';
 import 'package:Dogonomics/pages/socialSentimentPage.dart';
 import 'package:Dogonomics/pages/dogonomicsAdvicePage.dart';
-import 'package:Dogonomics/pages/transactionHistoryPage.dart';
 import 'package:Dogonomics/utils/constant.dart';
 import 'package:Dogonomics/utils/stockDialog.dart';
 import 'package:Dogonomics/utils/tickerData.dart';
 import 'package:Dogonomics/widgets/infoTooltip.dart';
+import 'package:Dogonomics/widgets/market_overview_widget.dart';
+import 'package:Dogonomics/widgets/quick_action_grid.dart';
+import 'package:Dogonomics/widgets/watchlist_widget.dart';
 
 import 'package:flutter/material.dart';
 
+
+import 'package:Dogonomics/widgets/doggo_inline_insight.dart';
 
 class StockViewTab extends StatefulWidget {
   final List<Stock> stocks;
@@ -190,206 +194,6 @@ class _StockViewTabState extends State<StockViewTab> {
     );
   }
 
-  Widget _buildQuickActionsRow() {
-    return Wrap(
-      alignment: WrapAlignment.spaceEvenly,
-      spacing: 16.0,
-      runSpacing: 16.0,
-      children: [
-        _buildQuickActionButton(
-          icon: Icons.history,
-          label: 'History',
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => TransactionHistoryPage(
-                  portfolio: _stocks,
-                ),
-              ),
-            );
-          },
-        ),
-        _buildQuickActionButton(
-          icon: Icons.article_outlined,
-          label: 'Financial News',
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const NewsFeedPage(),
-              ),
-            );
-          },
-        ),
-        _buildQuickActionButton(
-          icon: Icons.chat_bubble_outline,
-          label: 'Social Sentiment',
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const SocialSentimentPage(),
-              ),
-            );
-          },
-        ),
-        _buildQuickActionButton(
-          icon: Icons.analytics_outlined,
-          label: 'Portfolio Analysis',
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => PortfolioAnalysisPage(
-                  portfolio: _stocks,
-                  totalValue: _totalPortfolioValue,
-                  totalDayChange: _totalDayChange,
-                ),
-              ),
-            );
-          },
-        ),
-        // Special Sniff Advice CTA button
-        Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: () => _showAdviceSymbolPicker(),
-            borderRadius: BorderRadius.circular(12),
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF1B5E20), Color(0xFF2E7D32)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF4CAF50).withOpacity(0.22),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-                border: Border.all(
-                  color: const Color(0xFF4CAF50).withOpacity(0.45),
-                ),
-              ),
-              child: const Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.psychology_outlined, size: 22, color: Color(0xFF66BB6A)),
-                  SizedBox(height: 4),
-                  Text(
-                    'AI Advice',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF66BB6A),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildQuickActionButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback onPressed,
-  }) {
-    return InkWell(
-      onTap: onPressed,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-        decoration: BoxDecoration(
-          color: MAINGREY,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, size: 24, color: ACCENT_COLOR),
-            SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMarketIndicatorsCard() {
-    return InkWell(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => MarketIndicatorsPage(),
-          ),
-        );
-      },
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: MAINGREY,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: ACCENT_COLOR, width: 2),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: ACCENT_COLOR,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.trending_up,
-                color: Colors.white,
-                size: 24,
-              ),
-            ),
-            SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Market Indicators',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    'View S&P 500, Dow Jones, NASDAQ & more',
-                    style: TextStyle(
-                      color: MAINGREY_LIGHT,
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(
-              Icons.arrow_forward_ios,
-              color: Colors.amber.shade700,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildDogAssistantBanner() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -414,7 +218,7 @@ class _StockViewTabState extends State<StockViewTab> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'AI Copilot is active',
+                  'Doggo Assistant is active',
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
@@ -455,12 +259,65 @@ class _StockViewTabState extends State<StockViewTab> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        if (_isLoading)
+          const Padding(
+            padding: EdgeInsets.only(bottom: 10),
+            child: LinearProgressIndicator(minHeight: 2, color: ACCENT_GREEN),
+          ),
         _buildDogAssistantBanner(),
         const SizedBox(height: 12),
+        const MarketOverviewWidget(),
+        const SizedBox(height: 16),
         _buildPortfolioSummaryCard(),
         const SizedBox(height: 16),
 
-        _buildQuickActionsRow(),
+        const DoggoInlineInsightWidget(
+          context: 'Portfolio',
+          prompt: 'Give me a brief 2-sentence market update and what it means for a tech-heavy stock portfolio today.',
+        ),
+        const SizedBox(height: 16),
+
+        QuickActionGrid(
+          onAddAsset: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => AddStockPage(
+                  onStockSelected: (symbol, quantity) async {
+                    await addStockToPortfolio(symbol, quantity);
+                  },
+                ),
+              ),
+            );
+          },
+          onAiInsights: () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const DogonomicsAdvicePage(symbol: 'SPY')));
+          },
+          onNewsFeed: () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const NewsFeedPage()));
+          },
+          onMarketIndic: () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const MarketIndicatorsPage()));
+          },
+          onSocialSentiment: () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const SocialSentimentPage()));
+          },
+          onPortfolioAnalysis: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => PortfolioAnalysisPage(
+                  portfolio: _stocks,
+                  totalValue: _totalPortfolioValue,
+                  totalDayChange: _totalDayChange,
+                ),
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: 16),
+
+        const WatchlistWidget(symbols: ['NVDA', 'TSLA', 'AMD', 'PLTR', 'COIN']),
         const SizedBox(height: 16),
 
         // Educational Tips Section
@@ -509,30 +366,7 @@ class _StockViewTabState extends State<StockViewTab> {
             ],
           )),
 
-        // Market Indicators Card
-        _buildMarketIndicatorsCard(),
-        SizedBox(height: 24),
-
-      // ADD STOCK
-        Container(child: Align(child: 
-          FloatingActionButton.extended(
-            backgroundColor: MAINGREY,
-            foregroundColor: MAINGREY_LIGHT,
-            onPressed: _isLoading ? null : () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => AddStockPage(
-                      onStockSelected: (symbol, quantity) async {
-                        await addStockToPortfolio(symbol, quantity);
-                      },
-                    ),
-                  ),
-                );
-              },
-            icon: Icon(Icons.add),
-            label: Text('ADD ETF'),
-          ),),)
+        const SizedBox(height: 24),
       ],
     );
   }
@@ -599,64 +433,5 @@ class _StockViewTabState extends State<StockViewTab> {
     );
   }
 
-  void _showAdviceSymbolPicker() {
-    if (_stocks.isNotEmpty) {
-      // If user has stocks, show picker from their portfolio
-      showDialog(
-        context: context,
-        builder: (context) => SimpleDialog(
-          backgroundColor: STOCK_CARD,
-          title: const Text(
-            'Choose a stock for AI Advice',
-            style: TextStyle(color: Colors.white, fontSize: 16),
-          ),
-          children: [
-            ..._stocks.map((stock) => SimpleDialogOption(
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => DogonomicsAdvicePage(symbol: stock.symbol),
-                  ),
-                );
-              },
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Row(
-                  children: [
-                    Text(
-                      stock.symbol,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        stock.name,
-                        style: TextStyle(color: Colors.grey[400], fontSize: 13),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            )),
-          ],
-        ),
-      );
-    } else {
-      // Fallback: go directly to a default symbol
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => const DogonomicsAdvicePage(symbol: 'AAPL'),
-        ),
-      );
-    }
-  }
 }
 

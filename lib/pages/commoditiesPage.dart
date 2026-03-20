@@ -2,6 +2,7 @@ import 'package:Dogonomics/backend/dogonomicsApi.dart';
 import 'package:Dogonomics/utils/constant.dart';
 import 'package:Dogonomics/utils/walletData.dart';
 import 'package:Dogonomics/widgets/addAssetDialog.dart';
+import 'package:Dogonomics/widgets/doggo_inline_insight.dart';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 
@@ -68,6 +69,12 @@ class _CommoditiesPageState extends State<CommoditiesPage> {
           _buildCategorySelector(),
           if (commodityOptions[selectedCategory]!.isNotEmpty)
             _buildSubtypeSelector(),
+            
+          const DoggoInlineInsightWidget(
+            context: 'Commodities',
+            prompt: 'Give a brief 2-sentence update on the current state of commodities like oil and gold.',
+          ),
+          
           Expanded(
             child: _buildContent(),
           ),

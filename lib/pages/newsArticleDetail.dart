@@ -1,6 +1,7 @@
 import 'package:Dogonomics/backend/dogonomicsApi.dart';
 import 'package:Dogonomics/utils/constant.dart';
 import 'package:flutter/material.dart';
+import 'package:Dogonomics/widgets/doggo_inline_insight.dart';
 
 class NewsArticleDetailPage extends StatelessWidget {
   final NewsItem newsItem;
@@ -186,6 +187,12 @@ class NewsArticleDetailPage extends StatelessWidget {
                       height: 1.6,
                       letterSpacing: 0.3,
                     ),
+                  ),
+                  const SizedBox(height: 32),
+
+                  DoggoInlineInsightWidget(
+                    context: 'Article Summarizer',
+                    prompt: 'Summarize the following financial news article and extract 3 key takeaways. Article Title: ${newsItem.title}. Content: ${newsItem.content}',
                   ),
                   const SizedBox(height: 32),
 

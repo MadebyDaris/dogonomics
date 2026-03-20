@@ -3,6 +3,7 @@ import 'package:Dogonomics/utils/constant.dart';
 import 'package:Dogonomics/utils/walletData.dart';
 import 'package:Dogonomics/widgets/addAssetDialog.dart';
 import 'package:Dogonomics/pages/socialSentimentPage.dart';
+import 'package:Dogonomics/widgets/doggo_inline_insight.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart';
@@ -180,6 +181,10 @@ class _ForexCryptoPageState extends State<ForexCryptoPage>
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          const DoggoInlineInsightWidget(
+            context: 'Forex',
+            prompt: 'Give a 2-sentence breakdown of major forex movements today.',
+          ),
           _buildSectionHeader('Exchange Rates (USD)', Icons.currency_exchange),
           const SizedBox(height: 8),
           if (_forexRates != null) _buildForexRatesGrid(),
@@ -304,6 +309,10 @@ class _ForexCryptoPageState extends State<ForexCryptoPage>
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          const DoggoInlineInsightWidget(
+            context: 'Crypto',
+            prompt: 'Give a 2-sentence breakdown of major cryptocurrency movements today.',
+          ),
           _buildSectionHeader('Popular Cryptocurrencies', Icons.currency_bitcoin),
           const SizedBox(height: 8),
           if (_cryptoQuotes != null) ..._buildCryptoQuoteCards(),
