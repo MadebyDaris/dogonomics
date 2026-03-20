@@ -12,10 +12,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/MadebyDaris/dogonomics/internal/CommoditiesClient"
 	"github.com/MadebyDaris/dogonomics/internal/DogonomicsFetching"
 	"github.com/MadebyDaris/dogonomics/internal/NewsClient"
 	"github.com/MadebyDaris/dogonomics/internal/PolygonClient"
-	"github.com/MadebyDaris/dogonomics/internal/CommoditiesClient"
 	"github.com/MadebyDaris/dogonomics/internal/TreasuryClient"
 	"github.com/MadebyDaris/dogonomics/internal/cache"
 	"github.com/MadebyDaris/dogonomics/internal/database"
@@ -485,7 +485,7 @@ func (s *Server) handleGetCryptoCandleTool(ctx context.Context, req mcp.CallTool
 			days = int(d)
 		}
 	}
-	
+
 	now := time.Now().Unix()
 	from := now - int64(days*86400)
 
