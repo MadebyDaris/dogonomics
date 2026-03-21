@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/MadebyDaris/dogonomics/internal/DogonomicsProcessing"
-	"github.com/MadebyDaris/dogonomics/internal/api/polygon"
+	PolygonClient "github.com/MadebyDaris/dogonomics/internal/api/polygon"
 	"github.com/MadebyDaris/dogonomics/internal/service/sentiment"
 )
 
@@ -311,4 +311,3 @@ func (c *Client) GetCryptoCandle(ctx context.Context, symbol, resolution string,
 	}
 	return &candle, nil
 }
-

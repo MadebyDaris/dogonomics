@@ -10,23 +10,23 @@ import (
 
 // StockDetailData represents the comprehensive stock payload sent to the frontend.
 type StockDetailData struct {
-	CompanyName         string                  `json:"companyName"`
-	Description         string                  `json:"description"`
-	CurrentPrice        float64                 `json:"currentPrice"`
-	ChangePercentage    float64                 `json:"changePercentage"`
-	Exchange            string                  `json:"exchange"`
-	Symbol              string                  `json:"symbol"`
-	AssetType           string                  `json:"assetType"`
-	EBITDA              string                  `json:"ebitda"`
-	PERatio             float64                 `json:"peRatio"`
-	EPS                 float64                 `json:"eps"`
-	AboutDescription    string                  `json:"aboutDescription"`
-	ChartData           []ChartDataPoint        `json:"chartData"`
-	TechnicalIndicators []TechnicalIndicator    `json:"technicalIndicators"`
-	SentimentData       []ChartDataPoint        `json:"sentimentData"`
-	News                []sentiment.NewsItem    `json:"news"`
-	AnalyticsData       []ChartDataPoint        `json:"analyticsData"`
-	Logo                string                  `json:"logo"`
+	CompanyName         string               `json:"companyName"`
+	Description         string               `json:"description"`
+	CurrentPrice        float64              `json:"currentPrice"`
+	ChangePercentage    float64              `json:"changePercentage"`
+	Exchange            string               `json:"exchange"`
+	Symbol              string               `json:"symbol"`
+	AssetType           string               `json:"assetType"`
+	EBITDA              string               `json:"ebitda"`
+	PERatio             float64              `json:"peRatio"`
+	EPS                 float64              `json:"eps"`
+	AboutDescription    string               `json:"aboutDescription"`
+	ChartData           []ChartDataPoint     `json:"chartData"`
+	TechnicalIndicators []TechnicalIndicator `json:"technicalIndicators"`
+	SentimentData       []ChartDataPoint     `json:"sentimentData"`
+	News                []sentiment.NewsItem `json:"news"`
+	AnalyticsData       []ChartDataPoint     `json:"analyticsData"`
+	Logo                string               `json:"logo"`
 }
 
 // Common structures

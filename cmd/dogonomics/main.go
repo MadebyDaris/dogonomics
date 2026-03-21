@@ -17,16 +17,16 @@ import (
 	"time"
 
 	"github.com/MadebyDaris/dogonomics/docs"
-	"github.com/MadebyDaris/dogonomics/internal/api/commodities"
-	"github.com/MadebyDaris/dogonomics/internal/api/finnhub"
-	"github.com/MadebyDaris/dogonomics/internal/api/treasury"
+	CommoditiesClient "github.com/MadebyDaris/dogonomics/internal/api/commodities"
+	DogonomicsFetching "github.com/MadebyDaris/dogonomics/internal/api/finnhub"
+	TreasuryClient "github.com/MadebyDaris/dogonomics/internal/api/treasury"
 	"github.com/MadebyDaris/dogonomics/internal/cache"
 	"github.com/MadebyDaris/dogonomics/internal/database"
 	"github.com/MadebyDaris/dogonomics/internal/events"
 	"github.com/MadebyDaris/dogonomics/internal/handler/controller"
-	"github.com/MadebyDaris/dogonomics/internal/middleware"
 	"github.com/MadebyDaris/dogonomics/internal/mcpgateway"
-	"github.com/MadebyDaris/dogonomics/internal/service/bertinference"
+	"github.com/MadebyDaris/dogonomics/internal/middleware"
+	BertInference "github.com/MadebyDaris/dogonomics/internal/service/bertinference"
 	"github.com/MadebyDaris/dogonomics/internal/ws"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -350,4 +350,3 @@ func split(s string, sep byte) []string {
 	res = append(res, s[last:])
 	return res
 }
-

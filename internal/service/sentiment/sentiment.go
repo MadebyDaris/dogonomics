@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/MadebyDaris/dogonomics/internal/service/bertinference"
+	BertInference "github.com/MadebyDaris/dogonomics/internal/service/bertinference"
 	"github.com/MadebyDaris/dogonomics/internal/workerpool"
 )
 

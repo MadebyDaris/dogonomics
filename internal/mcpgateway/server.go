@@ -12,11 +12,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/MadebyDaris/dogonomics/internal/api/commodities"
-	"github.com/MadebyDaris/dogonomics/internal/api/finnhub"
-	"github.com/MadebyDaris/dogonomics/internal/api/news"
-	"github.com/MadebyDaris/dogonomics/internal/api/polygon"
-	"github.com/MadebyDaris/dogonomics/internal/api/treasury"
+	CommoditiesClient "github.com/MadebyDaris/dogonomics/internal/api/commodities"
+	DogonomicsFetching "github.com/MadebyDaris/dogonomics/internal/api/finnhub"
+	NewsClient "github.com/MadebyDaris/dogonomics/internal/api/news"
+	PolygonClient "github.com/MadebyDaris/dogonomics/internal/api/polygon"
+	TreasuryClient "github.com/MadebyDaris/dogonomics/internal/api/treasury"
 	"github.com/MadebyDaris/dogonomics/internal/cache"
 	"github.com/MadebyDaris/dogonomics/internal/database"
 	"github.com/MadebyDaris/dogonomics/internal/service/sentiment"
@@ -568,4 +568,3 @@ func maxInt(a, b int) int {
 	}
 	return b
 }
-

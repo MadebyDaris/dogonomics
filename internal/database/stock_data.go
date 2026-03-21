@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/MadebyDaris/dogonomics/internal/api/finnhub"
 	"github.com/MadebyDaris/dogonomics/internal/DogonomicsProcessing"
-	"github.com/MadebyDaris/dogonomics/internal/api/news"
+	DogonomicsFetching "github.com/MadebyDaris/dogonomics/internal/api/finnhub"
+	NewsClient "github.com/MadebyDaris/dogonomics/internal/api/news"
 	"github.com/MadebyDaris/dogonomics/internal/service/sentiment"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -375,4 +375,3 @@ func SaveTickerData(ctx context.Context, symbol string, data interface{}) error 
 	_, err = DB.Exec(ctx, query, symbol, "polygon", rawData)
 	return err
 }
-
