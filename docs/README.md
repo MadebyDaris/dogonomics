@@ -81,7 +81,7 @@ Create a `.env` file in the repository root:
 ## Run Locally
 
 ```bash
-go run dogonomics.go
+go run ./cmd/dogonomics
 ```
 
 Open Swagger at <http://localhost:8080/swagger/index.html>.

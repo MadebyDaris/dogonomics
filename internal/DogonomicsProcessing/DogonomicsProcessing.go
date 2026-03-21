@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/MadebyDaris/dogonomics/sentAnalysis"
+	"github.com/MadebyDaris/dogonomics/internal/service/sentiment"
 )
 
 // StockDetailData represents the comprehensive stock payload sent to the frontend.
@@ -24,7 +24,7 @@ type StockDetailData struct {
 	ChartData           []ChartDataPoint        `json:"chartData"`
 	TechnicalIndicators []TechnicalIndicator    `json:"technicalIndicators"`
 	SentimentData       []ChartDataPoint        `json:"sentimentData"`
-	News                []sentAnalysis.NewsItem `json:"news"`
+	News                []sentiment.NewsItem    `json:"news"`
 	AnalyticsData       []ChartDataPoint        `json:"analyticsData"`
 	Logo                string                  `json:"logo"`
 }

@@ -9,9 +9,9 @@ import (
 
 func main() {
 	directories := []string{
-		"internal/CoinGeckoClient",
-		"internal/ForexClient",
-		"internal/FredClient",
+		"internal/api/coingecko",
+		"internal/api/forex",
+		"internal/api/fred",
 	}
 
 	fmt.Println("Creating directories...\n")

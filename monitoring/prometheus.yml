@@ -4,8 +4,15 @@ global:
 
 scrape_configs:
   - job_name: 'dogonomics'
+    metrics_path: /metrics
     static_configs:
       - targets: ['dogonomics:8080']
+
+  # ONNX service is optional; this target is down unless --profile onnx is enabled.
+  - job_name: 'dogonomics_onnx'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['dogonomics-onnx:8080']
 
   - job_name: 'prometheus'
     static_configs:

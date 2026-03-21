@@ -5,32 +5,27 @@ A Go backend for real-time stock data, financial news aggregation, and FinBERT-p
 ## Project Structure
 
 ```
-dogonomics.go                  # Entry point — routing, middleware, signal handling
-controller/                    # HTTP handlers (Swagger-annotated)
+cmd/dogonomics/main.go         # Primary entry point
+dogonomics.go                  # Compatibility entry point
 internal/
-  DogonomicsFetching/          # Finnhub API client (quotes, profiles, financials)
+  api/                         # External provider clients (finnhub, polygon, news, treasury, etc.)
   DogonomicsProcessing/        # Shared data models (StockDetailData, ChartDataPoint, etc.)
+  handler/controller/          # HTTP handlers (Swagger-annotated)
+  middleware/                  # Gin middleware (auth, cache, logging, rate limits)
   mcpgateway/                  # MCP server over SSE (resources, tools, prompts)
-  PolygonClient/               # Polygon.io client (tickers, historical OHLCV)
-  NewsClient/                  # Multi-source news aggregation (Finnhub, EODHD, Alpha Vantage)
-  TreasuryClient/              # US Treasury Fiscal Data API client
-  CommoditiesClient/           # Alpha Vantage commodities client
+  service/                     # Domain services (sentiment, bert inference)
   database/                    # TimescaleDB connection pool, queries, schema
   cache/                       # Redis caching layer
   ws/                          # WebSocket hub, client, ticker (real-time streaming)
   events/                      # Kafka producer (event publishing)
   workerpool/                  # Bounded concurrent task execution
-sentAnalysis/                  # EODHD news fetching + FinBERT sentiment pipeline
-BertInference/                 # ONNX Runtime FinBERT model loading & inference
-middleware/                    # Gin middleware (database logger, response cache)
+assets/sentiment/              # DoggoFinBERT model + tokenizer assets
+migrations/                    # Database migration files (baseline: 001_init.sql)
 monitoring/                    # Prometheus & Grafana config
 docs/                          # Swagger generated docs
 ```
 
 ## Quick Start
-
-### 🚀 **Start Here:** [GETTING_STARTED.md](GETTING_STARTED.md)
-A complete step-by-step checklist to get the backend running (15-30 minutes).
 
 ### Option 1: Docker (Recommended)
 ```bash
@@ -48,14 +43,14 @@ docker compose up --build
 ### Option 2: Local PostgreSQL (Automated)
 ```bash
 # 1. Make sure you have PostgreSQL installed
-# 2. Run automated setup (detects your PostgreSQL superuser)
-.\setup-local-postgres-automated.ps1
+# 2. Run automated setup via command hub
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\dev.ps1 db-setup
 
 # 3. Copy .env and add API keys
 cp .env.example .env
 
 # 4. Run the backend
-go run dogonomics.go
+go run ./cmd/dogonomics
 
 # 5. Open Swagger UI
 # http://localhost:8080/swagger/index.html
@@ -63,6 +58,23 @@ go run dogonomics.go
 
 ### Option 3: Local Everything
 See [SETUP_GUIDE.md](SETUP_GUIDE.md) for detailed instructions.
+
+## Organized Guides
+
+Structured setup and architecture docs are available under `docs/`:
+
+- Setup index: [docs/setup/ONBOARDING.md](docs/setup/ONBOARDING.md)
+- Local Windows setup: [docs/setup/LOCAL_SETUP_WINDOWS.md](docs/setup/LOCAL_SETUP_WINDOWS.md)
+- Docker setup: [docs/setup/DOCKER_SETUP.md](docs/setup/DOCKER_SETUP.md)
+- ONNX/BERT setup: [docs/setup/ONNX_BERT_SETUP.md](docs/setup/ONNX_BERT_SETUP.md)
+- Script guide: [docs/setup/SCRIPT_GUIDE.md](docs/setup/SCRIPT_GUIDE.md)
+- Backend architecture: [docs/architecture/BACKEND_ARCHITECTURE.md](docs/architecture/BACKEND_ARCHITECTURE.md)
+
+Script entrypoints are now grouped in `scripts/` (PowerShell primary).
+Primary command hub: `./scripts/dev.ps1 help`
+Batch entrypoint: `dev.bat`
+
+Python utilities are archived under `legacy/python/` and are not part of the active backend flow.
 
 ## Environment Variables
 

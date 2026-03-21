@@ -12,14 +12,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/MadebyDaris/dogonomics/internal/CommoditiesClient"
-	"github.com/MadebyDaris/dogonomics/internal/DogonomicsFetching"
-	"github.com/MadebyDaris/dogonomics/internal/NewsClient"
-	"github.com/MadebyDaris/dogonomics/internal/PolygonClient"
-	"github.com/MadebyDaris/dogonomics/internal/TreasuryClient"
+	"github.com/MadebyDaris/dogonomics/internal/api/commodities"
+	"github.com/MadebyDaris/dogonomics/internal/api/finnhub"
+	"github.com/MadebyDaris/dogonomics/internal/api/news"
+	"github.com/MadebyDaris/dogonomics/internal/api/polygon"
+	"github.com/MadebyDaris/dogonomics/internal/api/treasury"
 	"github.com/MadebyDaris/dogonomics/internal/cache"
 	"github.com/MadebyDaris/dogonomics/internal/database"
-	"github.com/MadebyDaris/dogonomics/sentAnalysis"
+	"github.com/MadebyDaris/dogonomics/internal/service/sentiment"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/redis/go-redis/v9"
@@ -388,16 +388,16 @@ func (s *Server) handleAnalyzeLiveSentimentTool(ctx context.Context, req mcp.Cal
 		}
 	}
 
-	newsItems := make([]sentAnalysis.NewsItem, 0, len(articles))
+	newsItems := make([]sentiment.NewsItem, 0, len(articles))
 	for _, article := range articles {
-		newsItems = append(newsItems, sentAnalysis.NewsItem{
+		newsItems = append(newsItems, sentiment.NewsItem{
 			Title:   article.Title,
 			Content: article.Description,
 			Link:    article.URL,
 		})
 	}
 
-	aggregate := sentAnalysis.FetchStockSentiment(ctx, newsItems)
+	aggregate := sentiment.FetchStockSentiment(ctx, newsItems)
 	return jsonToolResult(map[string]any{
 		"ticker":     strings.ToUpper(ticker),
 		"aggregate":  aggregate,
@@ -568,3 +568,4 @@ func maxInt(a, b int) int {
 	}
 	return b
 }
+

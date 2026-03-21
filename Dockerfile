@@ -27,7 +27,7 @@ COPY . ./
 ENV GOFLAGS=-buildvcs=false
 RUN --mount=type=cache,target=/root/.cache/go-build \
 	CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH sh -c 'if [ -d vendor ]; then MOD="-mod=vendor"; else go mod download; MOD=""; fi; \
-	go build $MOD -ldflags="-s -w" -trimpath -o /out/dogonomics ./'
+	go build $MOD -ldflags="-s -w" -trimpath -o /out/dogonomics ./cmd/dogonomics'
 
 # Final stage
 FROM --platform=$TARGETOS/$TARGETARCH alpine:latest

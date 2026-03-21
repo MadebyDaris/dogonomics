@@ -105,6 +105,50 @@ func Delete(ctx context.Context, key string) error {
 	return Client.Del(ctx, key).Err()
 }
 
+// DeleteByPattern deletes keys matching the given Redis pattern using SCAN.
+// maxKeys prevents accidental broad deletion when pattern is too large.
+func DeleteByPattern(ctx context.Context, pattern string, maxKeys int64) (int64, error) {
+	if Client == nil {
+		return 0, nil
+	}
+
+	if maxKeys <= 0 {
+		maxKeys = 2000
+	}
+
+	var (
+		cursor   uint64
+		deleted  int64
+		batchCap int64 = 200
+	)
+
+	for {
+		keys, next, err := Client.Scan(ctx, cursor, pattern, batchCap).Result()
+		if err != nil {
+			return deleted, err
+		}
+
+		if int64(len(keys))+deleted > maxKeys {
+			keys = keys[:maxKeys-deleted]
+		}
+
+		if len(keys) > 0 {
+			if err := Client.Del(ctx, keys...).Err(); err != nil {
+				return deleted, err
+			}
+			deleted += int64(len(keys))
+		}
+
+		if deleted >= maxKeys || next == 0 {
+			break
+		}
+
+		cursor = next
+	}
+
+	return deleted, nil
+}
+
 // HealthCheck verifies the Redis connection is alive
 func HealthCheck(ctx context.Context) error {
 	if Client == nil {

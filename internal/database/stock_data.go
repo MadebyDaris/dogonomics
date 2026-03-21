@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/MadebyDaris/dogonomics/internal/DogonomicsFetching"
+	"github.com/MadebyDaris/dogonomics/internal/api/finnhub"
 	"github.com/MadebyDaris/dogonomics/internal/DogonomicsProcessing"
-	"github.com/MadebyDaris/dogonomics/internal/NewsClient"
-	"github.com/MadebyDaris/dogonomics/sentAnalysis"
+	"github.com/MadebyDaris/dogonomics/internal/api/news"
+	"github.com/MadebyDaris/dogonomics/internal/service/sentiment"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
@@ -46,8 +46,8 @@ func SaveStockQuote(ctx context.Context, symbol string, quote *DogonomicsFetchin
 	return err
 }
 
-// SaveNewsWithSentiment saves a news item from sentAnalysis package and returns the generated ID
-func SaveNewsWithSentiment(ctx context.Context, symbol string, news *sentAnalysis.NewsItem) (uuid.UUID, error) {
+// SaveNewsWithSentiment saves a news item from sentiment service and returns the generated ID
+func SaveNewsWithSentiment(ctx context.Context, symbol string, news *sentiment.NewsItem) (uuid.UUID, error) {
 	if DB == nil {
 		return uuid.Nil, ErrDatabaseNotConnected
 	}
@@ -98,7 +98,7 @@ func SaveNewsWithSentiment(ctx context.Context, symbol string, news *sentAnalysi
 }
 
 // SaveNewsSentiment saves BERT sentiment analysis results for a news item
-func SaveNewsSentiment(ctx context.Context, newsItemID uuid.UUID, news *sentAnalysis.NewsItem) error {
+func SaveNewsSentiment(ctx context.Context, newsItemID uuid.UUID, news *sentiment.NewsItem) error {
 	if DB == nil {
 		return ErrDatabaseNotConnected
 	}
@@ -134,7 +134,7 @@ func SaveNewsSentiment(ctx context.Context, newsItemID uuid.UUID, news *sentAnal
 }
 
 // SaveAggregatedSentiment saves aggregate sentiment analysis for a symbol
-func SaveAggregatedSentiment(ctx context.Context, symbol string, aggregate *sentAnalysis.StockSentimentAnalysis) error {
+func SaveAggregatedSentiment(ctx context.Context, symbol string, aggregate *sentiment.StockSentimentAnalysis) error {
 	if DB == nil {
 		return ErrDatabaseNotConnected
 	}
@@ -375,3 +375,4 @@ func SaveTickerData(ctx context.Context, symbol string, data interface{}) error 
 	_, err = DB.Exec(ctx, query, symbol, "polygon", rawData)
 	return err
 }
+

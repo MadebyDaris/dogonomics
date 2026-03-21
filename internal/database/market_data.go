@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/MadebyDaris/dogonomics/internal/CommoditiesClient"
-	"github.com/MadebyDaris/dogonomics/internal/TreasuryClient"
+	"github.com/MadebyDaris/dogonomics/internal/api/commodities"
+	"github.com/MadebyDaris/dogonomics/internal/api/treasury"
 )
 
 // SaveTreasuryData saves treasury API response data to the database
@@ -89,3 +89,4 @@ func GetLatestCommodityData(ctx context.Context, name string) (json.RawMessage, 
 	err := DB.QueryRow(ctx, query, name).Scan(&rawData)
 	return rawData, err
 }
+

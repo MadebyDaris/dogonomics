@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/MadebyDaris/dogonomics/internal/DogonomicsFetching"
+	"github.com/MadebyDaris/dogonomics/internal/api/finnhub"
 )
 
 // QuoteTicker periodically fetches quotes for symbols that have active WS
@@ -143,3 +143,4 @@ func PublishNewsEvent(hub *Hub, symbol string, data interface{}) {
 		Payload: payload,
 	}
 }
+

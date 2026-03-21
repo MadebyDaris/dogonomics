@@ -16,18 +16,18 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/MadebyDaris/dogonomics/BertInference"
-	"github.com/MadebyDaris/dogonomics/controller"
 	"github.com/MadebyDaris/dogonomics/docs"
-	"github.com/MadebyDaris/dogonomics/internal/CommoditiesClient"
-	"github.com/MadebyDaris/dogonomics/internal/DogonomicsFetching"
-	"github.com/MadebyDaris/dogonomics/internal/TreasuryClient"
+	"github.com/MadebyDaris/dogonomics/internal/api/commodities"
+	"github.com/MadebyDaris/dogonomics/internal/api/finnhub"
+	"github.com/MadebyDaris/dogonomics/internal/api/treasury"
 	"github.com/MadebyDaris/dogonomics/internal/cache"
 	"github.com/MadebyDaris/dogonomics/internal/database"
 	"github.com/MadebyDaris/dogonomics/internal/events"
+	"github.com/MadebyDaris/dogonomics/internal/handler/controller"
 	"github.com/MadebyDaris/dogonomics/internal/mcpgateway"
+	"github.com/MadebyDaris/dogonomics/internal/middleware"
+	"github.com/MadebyDaris/dogonomics/internal/service/bertinference"
 	"github.com/MadebyDaris/dogonomics/internal/ws"
-	"github.com/MadebyDaris/dogonomics/middleware"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"github.com/prometheus/client_golang/prometheus"
@@ -104,8 +104,8 @@ func main() {
 	}
 
 	fmt.Println("Initializing BERT model...")
-	modelPath := "./sentAnalysis/DoggoFinBERT.onnx"
-	vocabPath := "./sentAnalysis/finbert/vocab.txt"
+	modelPath := "./assets/sentiment/DoggoFinBERT.onnx"
+	vocabPath := "./assets/sentiment/finbert/vocab.txt"
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
@@ -160,7 +160,7 @@ func main() {
 	)
 
 	prometheus.MustRegister(httpRequestsTotal, httpRequestDuration)
-	// Middleware — order matters:
+	// Middleware - order matters:
 	// 1. CORS must be first to handle preflight OPTIONS requests
 	// 2. Rate limiting before auth to block floods early
 	// 3. Auth validates Firebase ID tokens
@@ -282,6 +282,9 @@ func main() {
 	r.GET("/db/sentiment/daily/:symbol", controller.GetDailySentimentSummaryHandler)
 	r.GET("/db/requests/recent", controller.GetRecentRequestsHandler)
 	r.GET("/db/requests/by-symbol", controller.GetRequestsBySymbolHandler)
+
+	// Admin operations
+	r.POST("/admin/cache/invalidate", controller.InvalidateCacheByPattern)
 
 	// WebSocket endpoints (token verified via query param)
 	r.GET("/ws/quotes/:symbol", func(c *gin.Context) {
