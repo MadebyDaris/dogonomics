@@ -5,3 +5,16 @@ sentAnalysis/DoggoFinBERT.onnx
 /go.sum
 /vendor
 .vscode
+./dogonomics.exe
+./dogonomics-onnx.exe
+
+# Large binary artifacts should not be committed
+*.onnx
+*.ONNX
+*.bin
+*.BIN
+*.exe
+*.EXE
+
+# Keep this source Docker config tracked
+!Dockerfile.onnx
