@@ -72,15 +72,20 @@ The database is automatically initialised from `internal/database/schema.sql` on
 
 If you prefer running the database without Docker:
 
-1. **Install PostgreSQL 14+** from [postgresql.org](https://www.postgresql.org/download/windows/).
-2. Run the setup script:
+1. **Linux:** run helper scripts from repo root:
+  ```bash
+  ./tools/scripts/linux/docker-compose-up.sh --detach
+  # or for a local Go binary
+  ./tools/scripts/linux/build.sh && ./tools/scripts/linux/run.sh
+  ```
+2. **Windows:** install PostgreSQL 14+ from [postgresql.org](https://www.postgresql.org/download/windows/), then run:
    ```powershell
-   .\setup-local-postgres.ps1    # PowerShell (recommended)
-   .\setup-local-postgres.bat    # or CMD
+  .\tools\scripts\windows\setup-local-postgres.ps1    # PowerShell (recommended)
+  .\tools\scripts\windows\setup-local-postgres.bat    # or CMD
    ```
-3. Verify the connection:
+3. Verify the connection (Windows):
    ```bat
-   .\test-db-connection.bat
+  .\tools\scripts\windows\test-db-connection.bat
    ```
 4. Configure `.env`:
    ```env
@@ -291,7 +296,16 @@ $env:Path="$env:Path;C:\onnxruntime\lib"
 go run -tags onnx .\dogonomics.go
 ```
 
-Or use the batch scripts: `runtimesetup.bat`, `build.bat`, `run.bat`.
+Or use Windows scripts in `tools/scripts/windows/` for ONNX workflows.
+
+Windows script locations:
+- `tools/scripts/windows/runtimesetup.bat`
+- `tools/scripts/windows/build-onnx.bat`
+- `tools/scripts/windows/run-onnx.bat`
+
+Linux helper scripts:
+- `tools/scripts/linux/build-onnx.sh`
+- `tools/scripts/linux/run-onnx.sh`
 
 ---
 

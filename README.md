@@ -36,9 +36,16 @@ docker compose up --build
 # 3. Or run locally
 go run dogonomics.go
 
+# 3a. Linux helper scripts (optional)
+./tools/scripts/linux/docker-compose-up.sh --detach
+./tools/scripts/linux/build.sh
+./tools/scripts/linux/run.sh
+
 # 4. Open Swagger UI
 # http://localhost:8080/swagger/index.html
 ```
+
+Windows scripts were moved under `tools/scripts/windows/`. Convenience wrappers kept at root: `build.bat`, `docker-compose-up.bat`, `docker-compose-down.bat`.
 
 ## Environment Variables
 
@@ -65,6 +72,10 @@ docker compose up --build
 
 # Include ONNX variant with BERT on port 8081
 docker compose --profile onnx up --build
+
+# Linux helper wrappers (optional)
+./tools/scripts/linux/docker-compose-up.sh --onnx --detach
+./tools/scripts/linux/docker-compose-down.sh
 ```
 
 Services: API (`:${PORT:-8080}`), TimescaleDB (:5432), Redis (:6379), Prometheus (:9090), Grafana (:3000).

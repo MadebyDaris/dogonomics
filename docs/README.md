@@ -100,7 +100,7 @@ docker compose up --build
 
 - Default Docker build excludes ONNX via build tags and uses a stub.
 - To enable ONNX in Docker, provide a base image with ONNX Runtime and build with `-tags=onnx`.
-- Locally, ensure ONNX Runtime is installed (see `runtimesetup.bat`).
+- Locally, ensure ONNX Runtime is installed (see `tools/scripts/windows/runtimesetup.bat`).
 
 ## Further Reading
 
