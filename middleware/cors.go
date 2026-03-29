@@ -38,7 +38,7 @@ func CORSMiddleware() gin.HandlerFunc {
 		}
 
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		c.Header("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Requested-With, X-Request-Timeout")
+		c.Header("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Requested-With, X-Request-Timeout, X-API-Key")
 		c.Header("Access-Control-Expose-Headers", "X-Cache, X-Request-ID, X-RateLimit-Remaining")
 		c.Header("Access-Control-Max-Age", "43200") // 12 hours
 		c.Header("Access-Control-Allow-Credentials", "true")

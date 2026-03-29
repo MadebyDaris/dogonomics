@@ -7,7 +7,11 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"os"
+	"path/filepath"
 	"runtime"
+	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -45,15 +49,18 @@ func InitializeBERT(modelPath, vocabPath string) error {
 	}
 	envMutex.Lock()
 	if !envInitialized {
-		err := setPlatformSpecificLibraryPath()
+		libraryPath, err := setPlatformSpecificLibraryPath()
 		if err != nil {
 			envMutex.Unlock()
 			return fmt.Errorf("failed to set library path: %v", err)
 		}
 
 		log.Println("Attempting to initialize ONNX Runtime environment...")
-		log.Printf("ONNX Runtime library path: C:/onnxruntime/lib/onnxruntime.dll")
-		log.Printf("Checking if library exists...")
+		if libraryPath != "" {
+			log.Printf("ONNX Runtime shared library path: %s", libraryPath)
+		} else {
+			log.Printf("ONNX Runtime shared library path: using dynamic linker search path")
+		}
 
 		err2 := ort.InitializeEnvironment()
 		if err2 != nil {
@@ -91,18 +98,97 @@ func InitializeBERT(modelPath, vocabPath string) error {
 }
 
 // setPlatformSpecificLibraryPath sets the correct ONNX Runtime library path based on the OS
-func setPlatformSpecificLibraryPath() error {
+func setPlatformSpecificLibraryPath() (string, error) {
+	if path := os.Getenv("ONNX_RUNTIME_LIB_PATH"); path != "" {
+		if fileExists(path) {
+			ort.SetSharedLibraryPath(path)
+			return path, nil
+		}
+		return "", fmt.Errorf("ONNX_RUNTIME_LIB_PATH is set but file does not exist: %s", path)
+	}
+
 	switch runtime.GOOS {
 	case "windows":
-		ort.SetSharedLibraryPath("C:/onnxruntime/lib/onnxruntime.dll")
+		defaultPath := "C:/onnxruntime/lib/onnxruntime.dll"
+		if !fileExists(defaultPath) {
+			return "", fmt.Errorf("default ONNX Runtime DLL not found at %s (set ONNX_RUNTIME_LIB_PATH to your dll path)", defaultPath)
+		}
+		ort.SetSharedLibraryPath(defaultPath)
+		return defaultPath, nil
 	case "linux":
-		// In Docker, the library is at /usr/local/lib/libonnxruntime.so
-		// For local Linux, try the full path first, then fall back to system search
-		ort.SetSharedLibraryPath("/usr/local/lib/libonnxruntime.so")
+		candidates := []string{
+			"/usr/local/lib/libonnxruntime.so",
+			"/usr/local/lib/libonnxruntime.so.1",
+			"/usr/lib/libonnxruntime.so",
+			"/usr/lib/libonnxruntime.so.1",
+			"/usr/lib/x86_64-linux-gnu/libonnxruntime.so",
+			"/lib/x86_64-linux-gnu/libonnxruntime.so",
+			"/usr/lib64/libonnxruntime.so",
+			"/usr/lib64/libonnxruntime.so.1",
+			"/lib64/libonnxruntime.so",
+			"/lib64/libonnxruntime.so.1",
+		}
+
+		for _, candidate := range candidates {
+			if fileExists(candidate) {
+				ort.SetSharedLibraryPath(candidate)
+				return candidate, nil
+			}
+		}
+
+		if discovered := discoverLinuxOnnxSharedLibrary(); discovered != "" {
+			ort.SetSharedLibraryPath(discovered)
+			return discovered, nil
+		}
+
+		return "", nil
 	default:
-		return fmt.Errorf("unsupported operating system: %s", runtime.GOOS)
+		return "", fmt.Errorf("unsupported operating system: %s", runtime.GOOS)
 	}
-	return nil
+}
+
+func discoverLinuxOnnxSharedLibrary() string {
+	searchDirs := []string{
+		"/usr/local/lib",
+		"/usr/lib",
+		"/usr/lib64",
+		"/usr/lib/x86_64-linux-gnu",
+		"/lib",
+		"/lib64",
+		"/lib/x86_64-linux-gnu",
+	}
+
+	matches := make([]string, 0)
+	for _, dir := range searchDirs {
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			continue
+		}
+		for _, entry := range entries {
+			if entry.IsDir() {
+				continue
+			}
+			name := entry.Name()
+			if strings.HasPrefix(name, "libonnxruntime.so") {
+				matches = append(matches, filepath.Join(dir, name))
+			}
+		}
+	}
+
+	if len(matches) == 0 {
+		return ""
+	}
+
+	sort.Strings(matches)
+	return matches[len(matches)-1]
+}
+
+func fileExists(path string) bool {
+	if path == "" {
+		return false
+	}
+	_, err := os.Stat(path)
+	return err == nil
 }
 
 func CleanupBERT() {
@@ -256,7 +342,7 @@ func runBERTInferenceInternal(text string, modelPath string) (*BERTSentiment, er
 
 func initializeBERTUnsafe(modelPath, vocabPath string) error {
 	// Set the path based on your platform
-	err := setPlatformSpecificLibraryPath()
+	_, err := setPlatformSpecificLibraryPath()
 	if err != nil {
 		return fmt.Errorf("failed to set library path: %v", err)
 	}

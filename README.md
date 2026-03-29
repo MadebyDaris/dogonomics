@@ -29,7 +29,7 @@ docs/                          # Swagger generated docs
 
 ## Quick Start
 
-### 🚀 **Start Here:** [GETTING_STARTED.md](GETTING_STARTED.md)
+### **Start Here:** [GETTING_STARTED.md](GETTING_STARTED.md)
 A complete step-by-step checklist to get the backend running (15-30 minutes).
 
 ### Option 1: Docker (Recommended)
@@ -49,7 +49,7 @@ docker compose up --build
 ```bash
 # 1. Make sure you have PostgreSQL installed
 # 2. Run automated setup (detects your PostgreSQL superuser)
-.\setup-local-postgres-automated.ps1
+.\tools\scripts\windows\setup-local-postgres-automated.ps1
 
 # 3. Copy .env and add API keys
 cp .env.example .env
@@ -124,9 +124,31 @@ docker compose --profile kafka up --build
 
 # Everything (ONNX + Kafka)
 docker compose --profile onnx --profile kafka up --build
+
+# Include AI sidecars (Ollama + MCP client bridge)
+docker compose --profile ai up --build
 ```
 
 Services: API (`:${PORT:-8080}`), TimescaleDB (:5432), Redis (:6379), Prometheus (:9090), Grafana (:3000), Kafka (:9092, opt-in).
+
+### AI Sidecars (Ollama + MCP Client)
+
+When the `ai` profile is enabled, Docker Compose also starts:
+
+- `ollama` at `:${OLLAMA_PORT:-11434}`
+- `mcp-client` bridge service that connects to `dogonomics` MCP SSE and keeps the tool session warm
+
+Quick start:
+
+```bash
+# Linux
+bash tools/scripts/linux/docker-compose-ai-up.sh
+
+# Windows
+tools\\scripts\\windows\\docker-compose-ai-up.bat
+```
+
+DigitalOcean note: this pattern works well for App Platform / Droplet Docker Compose deployments because AI services are declared as sidecars in the same stack and start automatically with the `ai` profile.
 
 ## Architecture
 

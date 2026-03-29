@@ -5,3 +5,14 @@ sentAnalysis/DoggoFinBERT.onnx
 /go.sum
 /vendor
 .vscode
+
+.dogohub_history
+.dogonomics-hub
+
+# Local binaries and build outputs
+dogonomics
+dogonomics.exe
+dogonomics-onnx
+dogonomics-onnx.exe
+test-onnx.exe
+build-test.log

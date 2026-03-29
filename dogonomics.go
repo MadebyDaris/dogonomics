@@ -9,6 +9,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -24,6 +25,7 @@ import (
 	"github.com/MadebyDaris/dogonomics/internal/TreasuryClient"
 	"github.com/MadebyDaris/dogonomics/internal/cache"
 	"github.com/MadebyDaris/dogonomics/internal/database"
+	"github.com/MadebyDaris/dogonomics/internal/dogohub"
 	"github.com/MadebyDaris/dogonomics/internal/events"
 	"github.com/MadebyDaris/dogonomics/internal/mcpgateway"
 	"github.com/MadebyDaris/dogonomics/internal/ws"
@@ -36,6 +38,18 @@ import (
 )
 
 func main() {
+	hubMode := flag.Bool("hub", false, "Start the DogoHub TUI Boot Menu")
+	flag.Parse()
+
+	if *hubMode {
+		dogohub.Run(StartServer)
+		return
+	}
+
+	StartServer()
+}
+
+func StartServer() {
 	err := godotenv.Load()
 	if err != nil {
 		fmt.Println("Error loading .env file")

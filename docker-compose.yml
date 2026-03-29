@@ -67,6 +67,40 @@ services:
       redis:
         condition: service_healthy
     restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "${OLLAMA_PORT:-11434}:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+    restart: unless-stopped
+    profiles:
+      - ai
+
+  mcp-client:
+    build:
+      context: .
+      dockerfile: Dockerfile.mcp-client
+    environment:
+      - MCP_SERVER_URL=${MCP_CLIENT_SERVER_URL:-http://dogonomics:8081/mcp/sse}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3}
+      - OLLAMA_HOST=http://ollama:11434
+      - MCP_CLIENT_KEEPALIVE_SECONDS=${MCP_CLIENT_KEEPALIVE_SECONDS:-30}
+      - MCP_RETRY_DELAY_SECONDS=${MCP_RETRY_DELAY_SECONDS:-5}
+    depends_on:
+      dogonomics:
+        condition: service_started
+      ollama:
+        condition: service_healthy
+    restart: unless-stopped
+    profiles:
+      - ai
   
   # ONNX-enabled variant with BERT sentiment analysis
   dogonomics-onnx:
@@ -154,3 +188,4 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  ollama_data:
