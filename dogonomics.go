@@ -9,11 +9,16 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -118,8 +123,10 @@ func StartServer() {
 	}
 
 	fmt.Println("Initializing BERT model...")
-	modelPath := "./sentAnalysis/DoggoFinBERT.onnx"
-	vocabPath := "./sentAnalysis/finbert/vocab.txt"
+	modelPath, vocabPath, resolveErr := resolveBertAssets()
+	if resolveErr != nil {
+		log.Printf("WARNING: BERT assets resolution failed: %v", resolveErr)
+	}
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
@@ -353,6 +360,107 @@ func StartServer() {
 			log.Fatalf("Failed to start server: %v", err)
 		}
 	}
+}
+
+func resolveBertAssets() (string, string, error) {
+	modelPath := strings.TrimSpace(os.Getenv("BERT_MODEL_PATH"))
+	if modelPath == "" {
+		modelPath = "./sentAnalysis/DoggoFinBERT.onnx"
+	}
+
+	vocabPath := strings.TrimSpace(os.Getenv("BERT_VOCAB_PATH"))
+	if vocabPath == "" {
+		vocabPath = "./sentAnalysis/finbert/vocab.txt"
+	}
+
+	autoDownload := !strings.EqualFold(strings.TrimSpace(os.Getenv("BERT_AUTO_DOWNLOAD")), "false")
+	modelURL := strings.TrimSpace(os.Getenv("BERT_MODEL_URL"))
+	vocabURL := strings.TrimSpace(os.Getenv("BERT_VOCAB_URL"))
+
+	var errs []string
+
+	if !fileExists(modelPath) {
+		if autoDownload && modelURL != "" {
+			if err := downloadToPath(modelURL, modelPath, 3*time.Minute); err != nil {
+				errs = append(errs, fmt.Sprintf("model download failed: %v", err))
+			} else {
+				log.Printf("BERT model downloaded to %s", modelPath)
+			}
+		} else {
+			errs = append(errs, "model file missing and auto-download is disabled or BERT_MODEL_URL is empty")
+		}
+	}
+
+	if !fileExists(vocabPath) {
+		if autoDownload && vocabURL != "" {
+			if err := downloadToPath(vocabURL, vocabPath, 2*time.Minute); err != nil {
+				errs = append(errs, fmt.Sprintf("vocab download failed: %v", err))
+			} else {
+				log.Printf("BERT vocab downloaded to %s", vocabPath)
+			}
+		} else {
+			errs = append(errs, "vocab file missing and auto-download is disabled or BERT_VOCAB_URL is empty")
+		}
+	}
+
+	if len(errs) > 0 {
+		return modelPath, vocabPath, errors.New(strings.Join(errs, "; "))
+	}
+
+	return modelPath, vocabPath, nil
+}
+
+func fileExists(path string) bool {
+	info, err := os.Stat(path)
+	if err != nil {
+		return false
+	}
+	return !info.IsDir()
+}
+
+func downloadToPath(srcURL string, dstPath string, timeout time.Duration) error {
+	if strings.Contains(strings.ToLower(srcURL), "drive.google.com") {
+		return fmt.Errorf("google drive links are not supported for automated startup downloads; use a direct file URL (e.g. DigitalOcean Spaces/S3/R2 public object URL)")
+	}
+
+	if err := os.MkdirAll(filepath.Dir(dstPath), 0o755); err != nil {
+		return fmt.Errorf("failed creating destination directory: %w", err)
+	}
+
+	client := &http.Client{Timeout: timeout}
+	resp, err := client.Get(srcURL)
+	if err != nil {
+		return fmt.Errorf("download request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("download failed with status: %s", resp.Status)
+	}
+
+	tmpPath := dstPath + ".tmp"
+	out, err := os.Create(tmpPath)
+	if err != nil {
+		return fmt.Errorf("failed creating temp file: %w", err)
+	}
+
+	if _, err := io.Copy(out, resp.Body); err != nil {
+		out.Close()
+		_ = os.Remove(tmpPath)
+		return fmt.Errorf("failed writing downloaded file: %w", err)
+	}
+
+	if err := out.Close(); err != nil {
+		_ = os.Remove(tmpPath)
+		return fmt.Errorf("failed closing temp file: %w", err)
+	}
+
+	if err := os.Rename(tmpPath, dstPath); err != nil {
+		_ = os.Remove(tmpPath)
+		return fmt.Errorf("failed moving downloaded file into place: %w", err)
+	}
+
+	return nil
 }
 
 // splitPath splits a URL path into segments, trimming leading/trailing slashes.

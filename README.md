@@ -90,9 +90,28 @@ See [SETUP_GUIDE.md](SETUP_GUIDE.md) for detailed instructions.
 | `RATE_LIMIT_RPM_USER`  | No       | Per-authenticated-user requests/minute limit |
 | `BERT_MAX_CONCURRENCY` | No       | Max concurrent FinBERT inferences (recommended: 1) |
 | `BERT_QUEUE_TIMEOUT_SECONDS` | No | Queue wait timeout before FinBERT request fails |
+| `BERT_MODEL_PATH`      | No       | Local path to FinBERT ONNX model (default: `./sentAnalysis/DoggoFinBERT.onnx`) |
+| `BERT_VOCAB_PATH`      | No       | Local path to tokenizer vocab file (default: `./sentAnalysis/finbert/vocab.txt`) |
+| `BERT_AUTO_DOWNLOAD`   | No       | Auto-download missing FinBERT assets on startup (`true`/`false`) |
+| `BERT_MODEL_URL`       | No       | URL to download FinBERT ONNX model when missing |
+| `BERT_VOCAB_URL`       | No       | URL to download vocab file when missing |
 | `MCP_ENABLED`          | No       | Enable MCP SSE server (default: true) |
 | `MCP_ADDR`             | No       | MCP listen address (default: :8081) |
 | `MCP_BASE_URL`         | No       | Public MCP base URL (default: http://localhost:8081) |
+
+### FinBERT on DigitalOcean
+
+You can run FinBERT in two ways:
+
+1. Ship assets with your deployment image/volume and set:
+  - `BERT_MODEL_PATH`
+  - `BERT_VOCAB_PATH`
+2. Auto-download on app startup (recommended for ephemeral droplets):
+  - `BERT_AUTO_DOWNLOAD=true`
+  - `BERT_MODEL_URL=<public model URL>`
+  - `BERT_VOCAB_URL=<public vocab URL>`
+
+If files are missing and URLs are not configured, the backend still starts but sentiment features are disabled.
 
 ## MCP Server
 

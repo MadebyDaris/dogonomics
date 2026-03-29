@@ -1,0 +1,22 @@
+services:
+  timescaledb:
+    volumes:
+      - ${DOGONOMICS_DATA_ROOT:-/mnt/dogonomics}/timescaledb:/var/lib/postgresql/data
+      - ./internal/database/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+
+  redis:
+    volumes:
+      - ${DOGONOMICS_DATA_ROOT:-/mnt/dogonomics}/redis:/data
+
+  dogonomics:
+    volumes:
+      - ./sentAnalysis/DoggoFinBERT.onnx:/sentAnalysis/DoggoFinBERT.onnx:ro
+      - ${FIREBASE_SERVICE_ACCOUNT_HOST_PATH:-/mnt/dogonomics/secrets/firebase-adminsdk.json}:/run/secrets/firebase-adminsdk.json:ro
+
+  dogonomics-onnx:
+    volumes:
+      - ${FIREBASE_SERVICE_ACCOUNT_HOST_PATH:-/mnt/dogonomics/secrets/firebase-adminsdk.json}:/run/secrets/firebase-adminsdk.json:ro
+
+  ollama:
+    volumes:
+      - ${DOGONOMICS_DATA_ROOT:-/mnt/dogonomics}/ollama:/root/.ollama
